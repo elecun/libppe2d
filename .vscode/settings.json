@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "v4l2-controls.h": "c"
+        "v4l2-controls.h": "c",
+        "exception": "cpp"
     }
 }

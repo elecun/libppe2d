@@ -16,24 +16,24 @@ ARCH := armhf
 #GCC := /usr/bin/arm-linux-gnueabihf-gcc-8
 CC := g++-8
 GCC := gcc-8
-LD_LIBRARY_PATH += -L./lib/armhf
-OUTDIR		= ./bin
-BUILDDIR		= ./bin
+OUTDIR		= ./bin/
+BUILDDIR		= ./bin/
 INCLUDE_DIR = -I./ -I./include/
-LD_LIBRARY_PATH += -L/usr/local/lib -L./lib/armhf
+LD_LIBRARY_PATH += -L/usr/local/lib/ -L./lib/
+OPENCV_LIB = $(shell pkg-config --cflags --libs opencv)
 
 
 # OS
 ifeq ($(OS),Linux) #for Linux
 	LDFLAGS = -Wl,--export-dynamic -Wl,-rpath=$(LD_LIBRARY_PATH)
-	LDLIBS = -pthread
+	LDLIBS = -pthread -larducam_mipicamera ${OPENCV_LIB}
 	GTEST_LDLIBS = -lgtest
 endif
 
 $(shell mkdir -p $(BUILDDIR))
 
 #if release(-O3), debug(-O0)
-CXXFLAGS = -O3 -fPIC -Wall -std=c++17 -D__cplusplus=201703L
+CXXFLAGS = -O3 -fPIC -Wall -std=c++17 -D__cplusplus=201703L ${OPENCV_LIB}
 
 #custom definitions
 CXXFLAGS += -D__MAJOR__=0 -D__MINOR__=0 -D__REV__=1
