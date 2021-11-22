@@ -84,11 +84,6 @@ namespace ppe {
             return false;
         }
 
-        /* show camera info */
-        void print_info(){
-
-        }
-
         /* camera capture */
         cv::Mat* capture(){
             IMAGE_FORMAT fmt = {IMAGE_ENCODING_I420, 50};
@@ -100,6 +95,7 @@ namespace ppe {
             int height = VCOS_ALIGN_UP(_property.resolution.height, 16);
             cv::Mat *image = new cv::Mat(cv::Size(width,(int)(height * 1.5)), CV_8UC1, buffer->data);
             cv::cvtColor(*image, *image, cv::COLOR_YUV2BGR_I420);
+            //cv::cvtColor(*image, *image, cv::COLOR_YUV2GRAY_I420);
             arducam_release_buffer(buffer);
 
             return image;

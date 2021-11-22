@@ -16,6 +16,8 @@
 #include <include/spdlog/spdlog.h>
 #include <include/spdlog/sinks/stdout_color_sinks.h>
 
+#include <opencv2/opencv.hpp>
+
 using namespace std;
 
 ppe::iCamera* _camera = nullptr;
@@ -35,8 +37,11 @@ void cleanup(int sig) {
         spdlog::info("Cleaning up the program");
     }
 
-    if(_camera!=nullptr)
+    if(_camera!=nullptr){
+        _camera->close();
         delete _camera;
+    }
+        
 
     spdlog::info("Successfully terminated");
     exit(EXIT_SUCCESS);
@@ -91,6 +96,22 @@ int main(int argc, char** argv){
     //camera device
     if(!_camera){
         _camera = new ppe::ov2311(0, _MAX_RESOLUTION_);
+        _camera->open();
+        while(1){
+            spdlog::info("capture");
+            cv::Mat* image = _camera->capture();
+
+            //display lines to recognize the center of image
+            cv::line(*image, cv::Point(_camera->getResolution()->width/2, 0), cv::Point(_camera->getResolution()->width/2, _camera->getResolution()->height), cv::Scalar(255,0,0), 1);
+            cv::line(*image, cv::Point(0, _camera->getResolution()->height/2), cv::Point(_camera->getResolution()->width, _camera->getResolution()->height/2), cv::Scalar(255,0,0), 1);
+
+            //image undistortion
+            //cv::undistort(*image, *image)
+
+            cv::imshow("Camera View", *image);
+            cv::waitKey(1);
+            image->release();
+        }
     }
 
 
