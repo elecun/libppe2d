@@ -76,8 +76,12 @@ namespace ppe {
 
             if(init_rc==0){
                 int rc = arducam_set_resolution(_camera, &_property.resolution.width, &_property.resolution.height);
-                if(!rc) {
+                if(!rc) { //success
                     spdlog::info("Set camera resolution : {},{}", _property.resolution.width, _property.resolution.height);
+
+                    //calc camera matrix
+                    _camera_matrix = (cv::Mat1d(3,3) << _FX_, 0., _CX_, 0., _FY_, _CY_, 0., 0., 1.);
+                    _distortion_coeff = (cv::Mat1d(1,5) << _K1_, _K2_, 0, _P1_, _P2_);
                 }
                 return true;
             }

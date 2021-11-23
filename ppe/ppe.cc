@@ -17,6 +17,7 @@
 #include <include/spdlog/sinks/stdout_color_sinks.h>
 
 #include <opencv2/opencv.hpp>
+#include <opencv2/aruco.hpp>
 
 using namespace std;
 
@@ -97,18 +98,46 @@ int main(int argc, char** argv){
     if(!_camera){
         _camera = new ppe::ov2311(0, _MAX_RESOLUTION_);
         _camera->open();
+
+        //undistortion
+        cv::Mat map1, map2;
+        cv::initUndistortRectifyMap(_camera->_camera_matrix, _camera->_distortion_coeff, cv::Mat(), _camera->_camera_matrix, cv::Size(1600, 1300), CV_32FC1, map1, map2);
+
+        cv::Mat aruco_marker;
+        cv::Ptr<cv::aruco::Dictionary> dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_50);
+        //cv::Ptr<cv::aruco::Dictionary> dict = cv::aruco::generateCustomDictionary(1, 5);
+        cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
+
         while(1){
-            spdlog::info("capture");
             cv::Mat* image = _camera->capture();
 
             //display lines to recognize the center of image
-            cv::line(*image, cv::Point(_camera->getResolution()->width/2, 0), cv::Point(_camera->getResolution()->width/2, _camera->getResolution()->height), cv::Scalar(255,0,0), 1);
-            cv::line(*image, cv::Point(0, _camera->getResolution()->height/2), cv::Point(_camera->getResolution()->width, _camera->getResolution()->height/2), cv::Scalar(255,0,0), 1);
+            cv::line(*image, cv::Point(_camera->getResolution()->width/2, 0), cv::Point(_camera->getResolution()->width/2, _camera->getResolution()->height), cv::Scalar(0,255,0), 1);
+            cv::line(*image, cv::Point(0, _camera->getResolution()->height/2), cv::Point(_camera->getResolution()->width, _camera->getResolution()->height/2), cv::Scalar(0,255,0), 1);
+            
+            // undistortion
+            cv::Mat undist;
+            cv::remap(*image, undist, map1, map2, CV_INTER_LINEAR);
 
-            //image undistortion
-            //cv::undistort(*image, *image)
+            //convert to grayscale image
+            cv::Mat undist_gray;
+            cv::cvtColor(undist, undist_gray, CV_BGR2GRAY);
 
-            cv::imshow("Camera View", *image);
+            vector<vector<cv::Point2f>> markerCorners, rejectedCandidates;
+            vector<int> markerIds;
+
+            cv::aruco::detectMarkers(undist_gray, dict, markerCorners, markerIds, parameters, rejectedCandidates);
+
+            spdlog::info("Found markers : {}", markerCorners.size());
+            cv::aruco::drawDetectedMarkers(undist, markerCorners);
+
+            // for(auto& marker:markerCorners){
+            //     for(auto& point:marker){
+            //         cv::circle(undist, point, 1, cv::Scalar(0,0,255));
+            //     }
+            // }
+
+            cv::imshow("Camera View", undist);
             cv::waitKey(1);
             image->release();
         }

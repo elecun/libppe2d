@@ -76,6 +76,10 @@ namespace ppe {
             _property.resolution.height = height_resolution;
             if(intrinsic.cx==0) _intrinsic.cx = width_resolution/2.;
             if(intrinsic.cy==0) _intrinsic.cy = height_resolution/2.;
+
+            // camera parameters initialize
+            _camera_matrix = cv::Mat::eye(3,3,CV_64FC1);
+            _distortion_coeff = cv::Mat::zeros(1,5,CV_64FC1);
         }
 
         iCamera(int id, int width_resolution, int height_resolution)
@@ -96,6 +100,10 @@ namespace ppe {
         virtual Resolution* getResolution() { return &this->_property.resolution; }
         virtual void close() = 0;
         virtual bool open() = 0;
+
+        public:
+        cv::Mat _camera_matrix;
+        cv::Mat _distortion_coeff;
 
         protected:
         sIntrinsic _intrinsic;
