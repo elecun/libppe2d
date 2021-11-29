@@ -99,10 +99,20 @@ namespace ppe {
             int height = VCOS_ALIGN_UP(_property.resolution.height, 16);
             cv::Mat *image = new cv::Mat(cv::Size(width,(int)(height * 1.5)), CV_8UC1, buffer->data);
             cv::cvtColor(*image, *image, cv::COLOR_YUV2BGR_I420);
-            //cv::cvtColor(*image, *image, cv::COLOR_YUV2GRAY_I420);
             arducam_release_buffer(buffer);
 
-            return image;
+            //return image;
+            return nullptr;
+        }
+
+        bool capture_n(){
+            IMAGE_FORMAT fmt = {IMAGE_ENCODING_I420, 50};
+            BUFFER *buffer = arducam_capture(_camera, &fmt, 3000);
+            if(!buffer)
+                return false;
+            spdlog::info("Capture Data size : {}/{}",buffer->length, buffer->alloc_size);
+            arducam_release_buffer(buffer);
+            return true;
         }
 
         /* close camera */

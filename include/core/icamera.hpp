@@ -95,7 +95,8 @@ namespace ppe {
         }
 
         /* support interface function */
-        virtual cv::Mat* capture() = 0;
+        virtual cv::Mat* capture() = 0; //capture single frame
+        virtual bool capture_n() = 0; //capture multi frame
         virtual int getID() const { return this->_device_id; }
         virtual Resolution* getResolution() { return &this->_property.resolution; }
         virtual void close() = 0;
