@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/include"
+                "${workspaceFolder}/include",
+                "/opt/homebrew/Cellar/opencv/4.5.4_2/include/opencv4"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

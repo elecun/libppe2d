@@ -10,30 +10,66 @@ OS := $(shell uname)
 #Set Architecutre
 ARCH := armhf
 
+OSFLAG	:=
+ifeq ($(OS),Windows_NT)
+	OSFLAG += -D WIN32
+	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+		OSFLAG += -D AMD64
+	endif
+	ifeq ($(PROCESSOR_ARCHITECTURE),x86)
+		OSFLAG += -D IA32
+	endif
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Linux)
+		OSFLAG += -D LINUX
+	endif
+	ifeq ($(UNAME_S),Darwin)
+		OSFLAG += -D OSX
+		INCLUDE_DIR = -I/opt/homebrew/Cellar/opencv/4.5.4_2/include/opencv4
+	endif
+		UNAME_P := $(shell uname -p)
+	ifeq ($(UNAME_P),x86_64)
+		OSFLAG += -D AMD64
+	endif
+		ifneq ($(filter %86,$(UNAME_P)),)
+	OSFLAG += -D IA32
+		endif
+	ifneq ($(filter arm%,$(UNAME_P)),)
+		OSFLAG += -D ARM
+	endif
+endif
+
+
+
 #Compilers
 
 #CC := /usr/bin/arm-linux-gnueabihf-g++-8
 #GCC := /usr/bin/arm-linux-gnueabihf-gcc-8
-CC := g++-8
-GCC := gcc-8
+CC := g++
+GCC := gcc
 OUTDIR		= ./bin/
 BUILDDIR		= ./bin/
-INCLUDE_DIR = -I./ -I./include/
+INCLUDE_DIR += -I./ -I./include/
 LD_LIBRARY_PATH += -L/usr/local/lib/ -L./lib/
-OPENCV_LIB = $(shell pkg-config --cflags --libs opencv)
 
 
 # OS
 ifeq ($(OS),Linux) #for Linux
 	LDFLAGS = -Wl,--export-dynamic -Wl,-rpath=$(LD_LIBRARY_PATH)
-	LDLIBS = -pthread -larducam_mipicamera ${OPENCV_LIB}
+	LDLIBS = -pthread -larducam_mipicamera -lomp
 	GTEST_LDLIBS = -lgtest
+else
+
+endif
+
+ifeq ($(OS), Darwin)
 endif
 
 $(shell mkdir -p $(BUILDDIR))
 
 #if release(-O3), debug(-O0)
-CXXFLAGS = -O3 -fPIC -Wall -std=c++17 -D__cplusplus=201703L ${OPENCV_LIB}
+CXXFLAGS = -O3 -fPIC -Wall -std=c++17 -D__cplusplus=201703L
 
 #custom definitions
 CXXFLAGS += -D__MAJOR__=0 -D__MINOR__=0 -D__REV__=1
