@@ -57,9 +57,11 @@ LD_LIBRARY_PATH += -L/usr/local/lib/ -L./lib/
 # OS
 ifeq ($(OS),Linux) #for Linux
 	LDFLAGS = -Wl,--export-dynamic -Wl,-rpath=$(LD_LIBRARY_PATH)
-	LDLIBS = -pthread -larducam_mipicamera -lomp
+	LDLIBS = -lpthread  `pkg-config --cflags --libs opencv4` -lusb-1.0
 	GTEST_LDLIBS = -lgtest
 else
+
+# -lArduCamLib -lusb-1.0  -larducam_config_parser
 
 endif
 
@@ -85,7 +87,7 @@ INSTALL_DIR = /usr/local/bin/
 ppe:	$(BUILDDIR)ppe.o
 		$(CC) $(LDFLAGS) $(LD_LIBRARY_PATH) -o $(BUILDDIR)$@ $^ $(LDLIBS)
 $(BUILDDIR)ppe.o:	$(SOURCE_FILES)ppe/ppe.cc
-						$(CC) $(CXXFLAGS) $(INCLUDE_DIR) -c $^ -o $@
+						$(CC) $(CXXFLAGS) $(INCLUDE_DIR) -c $^ -o $@ $(LDLIBS)
 
 all : ppe libppe2d
 

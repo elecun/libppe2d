@@ -100,7 +100,22 @@ namespace ppe {
         virtual int getID() const { return this->_device_id; }
         virtual Resolution* getResolution() { return &this->_property.resolution; }
         virtual void close() = 0;
+
+        /**
+         * @brief camera device open
+         * 
+         * @return true success to open
+         * @return false fail to open
+         */
         virtual bool open() = 0;
+
+        /**
+         * @brief parse configuration file for camera parameters
+         * @param config_file_path configuration file
+         * @return true success
+         * @return false fail to read
+         */
+        virtual bool parse_config(const char* config_file_path) = 0;
 
         public:
         cv::Mat _camera_matrix;

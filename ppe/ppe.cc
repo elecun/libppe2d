@@ -1,54 +1,60 @@
 
 
 /**
- * @brief ppe.cc
- * @brief Precise Position Estimation Program
- * @author Byunghun Hwang<bh.hwang@iae.re.kr>
+ * @file ppe.cc
+ * @author Byunghun Hwang (bh.hwang@iae.re.kr)
+ * @brief PPE Application with universal ppe library 2D
+ * @version 0.1
+ * @date 2022-01-12
+ * 
+ * @copyright Copyright (c) 2022
+ * 
  */
-
-//#define _USE_OV2311_
 
 
 #include <libppe2d/libppe2d.hpp> //dedicated ppe library
-#include <include/cxxopts.hpp>
 #include <csignal>
 #include <include/spdlog/spdlog.h>
 #include <include/spdlog/sinks/stdout_color_sinks.h>
 #include <opencv2/opencv.hpp>
 #include <opencv2/aruco.hpp>
-
 #include "common.hpp"
-#ifdef _USE_OV2311_
-    #include <module/ov2311.hpp> //camera module
-    ppe::iCamera* _camera = nullptr;
+#include <memory>
+#include "include/cxxopts.hpp"
+
+#include <core/driver.hpp>
+#include <include/core/iController.hpp>
+
+/* to use camera device for ov2311 with USB3.0 or MIPI interface */
+#if defined(USE_SOURCE_CAMERA)
+    #if defined(USE_OV2311)
+        #include <module/ov2311.hpp>
+    #endif
+
+    #if defined(USE_BUS_CONTROLLER)
+        #if defined(USE_UC593C)
+            #include <module/uc593c.hpp>
+        #endif
+    #endif
 #endif
 
-/* analysis source */
+/* global variables */
+ppe::source::driver* g_source = nullptr;
+
+
+/* input source */
 enum SOURCES : int {
+    UNKNOWN = 0,
     CAMERA,
     IMAGE,
-    VIDEO,
-    UNKNOWN
+    VIDEO
 };
 
 using namespace std;
 
-/* global variables */
-
-
 /* cleanup the program */
 void cleanup(int sig) {
     ppe::cleanup(sig);
-
-    #ifdef _USE_OV2311_
-        if(_camera!=nullptr){
-            _camera->close();
-            delete _camera;
-        }
-    #endif
-        
-
-    spdlog::info("Successfully terminated");
     exit(EXIT_SUCCESS);
 }
 
@@ -59,22 +65,32 @@ int main(int argc, char** argv){
     spdlog::stdout_color_st("console");
     ppe::signal_set();
     
+    /* parse arguments */
     int optc = 0;
     int _source = SOURCES::IMAGE;
-    while((optc=getopt(argc, argv, "s:h"))!=-1)
+    while((optc=getopt(argc, argv, "s:p:h"))!=-1)
     {
         switch(optc){
-            case 's': { 
+            /* source selection */
+            case 's': {
                 string src = optarg;
                 if(!src.compare("camera")) _source = SOURCES::CAMERA;
                 else if(!src.compare("image")) _source = SOURCES::IMAGE;
                 else if(!src.compare("video")) _source = SOURCES::VIDEO;
-                else { _source = SOURCES::UNKNOWN; spdlog::error("{} is unknown source", src); }
+                else { _source = SOURCES::UNKNOWN; spdlog::error("{} is unknown source.", src); }
             } break;
+
+            /* read camera parameters */
+            case 'p': {
+                string _cam_param = optarg;
+                
+            } break;
+
+            /* help & unkown options */
             case 'h':
             default:
                 cout << fmt::format("PPE Application (built {}/{})", __DATE__, __TIME__) << endl;
-                cout << "Usage: ppe [-s source] [-h]" << endl;
+                cout << "Usage: ppe [-s source<camera|image|video>] [-p parameter_file] [-h]" << endl;
                 exit(EXIT_FAILURE);
             break;
         }
@@ -86,9 +102,14 @@ int main(int argc, char** argv){
         case SOURCES::IMAGE: { } break;
         case SOURCES::VIDEO: { } break;
         case SOURCES::CAMERA: {
-            #ifdef _USE_OV2311_
-                _camera = new ppe::ov2311(0, _MAX_RESOLUTION_);
-                _camera->open();
+            #if defined(USE_SOURCE_CAMERA)
+                #if (defined(USE_OV2311) && defined(USE_UC593C))
+                    //read parameter
+                    //create camera instance with parameter
+                    g_source = new ppe::camera::ov2311();
+                    //set bus controller
+                    //open device
+                #endif
             #endif
         } break;
     }
