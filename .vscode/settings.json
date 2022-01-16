@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "v4l2-controls.h": "c",
-        "exception": "cpp"
+        "exception": "cpp",
+        "fstream": "cpp",
+        "locale": "cpp"
     }
 }

@@ -21,15 +21,13 @@ namespace ppe::camera {
 
     class ov2311 : public ppe::source::driver {
         public:
-            ov2311(){ }
-            virtual ~ov2311() = default;
+            ov2311();
+            virtual ~ov2311();
 
-            /**
-             * @brief Set the bus object
-             * 
-             * @param bus bus controller to use
-             */
             void set_bus(ppe::controller::iController* bus) override;
+            bool open() override;
+            void close() override;
+            bool valid() override;
 
         protected:
             ppe::controller::iController* _controller = nullptr;

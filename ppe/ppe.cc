@@ -103,16 +103,23 @@ int main(int argc, char** argv){
         case SOURCES::VIDEO: { } break;
         case SOURCES::CAMERA: {
             #if defined(USE_SOURCE_CAMERA)
-                #if (defined(USE_OV2311) && defined(USE_UC593C))
-                    //read parameter
-                    //create camera instance with parameter
+                #if defined(USE_OV2311)
                     g_source = new ppe::camera::ov2311();
-                    //set bus controller
-                    //open device
+                    #if defined(USE_UC593C)
+                        g_source->set_bus(new ppe::controller::uc593c);
+                    #endif
+                    g_source->open();
                 #endif
             #endif
         } break;
     }
+
+    /* image processing */
+    if(g_source->valid()){
+        
+    }
+
+    
 
     /* processing */
 

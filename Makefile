@@ -88,6 +88,9 @@ ppe:	$(BUILDDIR)ppe.o
 		$(CC) $(LDFLAGS) $(LD_LIBRARY_PATH) -o $(BUILDDIR)$@ $^ $(LDLIBS)
 $(BUILDDIR)ppe.o:	$(SOURCE_FILES)ppe/ppe.cc
 						$(CC) $(CXXFLAGS) $(INCLUDE_DIR) -c $^ -o $@ $(LDLIBS)
+$(BUILDDIR)ov2311.o:	$(INCLUDE_FILES)module/ov2311.cc
+						$(CC) $(CXXFLAGS) $(INCLUDE_DIR) -c $^ -o $@ $(LDLIBS)
+
 
 all : ppe libppe2d
 
