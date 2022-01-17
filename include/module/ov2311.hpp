@@ -10,29 +10,49 @@
  */
 
 #ifndef _MODULE_OV2311_HPP_
-#define _MODULE_OV2311_HPP
+#define _MODULE_OV2311_HPP_
 
-namespace ppe { 
-    class controller::iController; 
-    class source::driver;
-}
+#include <string>
+#include <memory>
+#include <core/driver.hpp>
+#include <module/ArduCamLib.h>
 
-namespace ppe::camera {
+#include <opencv2/opencv.hpp>
+#include <thread>
+#include <time.h>
+#include <iostream>
+#include <istream>
+#include <string>
+#include <sys/types.h> 
+#include <sys/stat.h>
+#include <module/a
+#include "arducam_config_parser.h"
+
+using namespace std;
+
+namespace ppe::controller { class iController; }
+namespace ppe::cmos {
 
     class ov2311 : public ppe::source::driver {
         public:
-            ov2311();
+            ov2311(const char* config);
             virtual ~ov2311();
 
             void set_bus(ppe::controller::iController* bus) override;
             bool open() override;
             void close() override;
-            bool valid() override;
+            bool is_valid() override;
+            void capture() override;
 
         protected:
             ppe::controller::iController* _controller = nullptr;
 
-    }
+        private:
+            string _config_file {""};
+
+            ArduCamHandle cameraHandle;
+
+    };
 
 } /* end namespace */
 

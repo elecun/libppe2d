@@ -14,8 +14,13 @@
 #ifndef _CORE_SOURCE_DRIVER_HPP_
 #define _CORE_SOURCE_DRIVER_HPP_
 
-namespace cv{ class Mat; }
+#include <memory>
+#include <opencv2/core/mat.hpp>
 
+using namespace std;
+
+
+namespace ppe::controller { class iController; }
 namespace ppe::source {
 
     class driver {
@@ -24,11 +29,12 @@ namespace ppe::source {
             virtual ~driver(){ };
 
             /**
-             * @brief set in
+             * @brief set bus controller instance into the driver
              * 
              * @param bus 
              */
             virtual void set_bus(ppe::controller::iController* bus) = 0;
+
 
             /**
              * @brief open source device and file
@@ -50,9 +56,13 @@ namespace ppe::source {
              * @return true if it is valid
              * @return false if not
              */
-            virtual bool valid() = 0;
+            virtual bool is_valid() = 0;
 
-            virtual cv::Mat 
+            /**
+             * @brief image capture (single take)
+             * 
+             */
+            virtual cv::Mat capture() = 0;
 
     };
     

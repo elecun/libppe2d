@@ -10,7 +10,7 @@
                 "/usr/include/x86_64-linux-gnu",
                 "/opt/homebrew/Cellar/opencv/4.5.4_2/include/opencv4"
             ],
-            "defines": ["USE_SOURCE_CAMERA", "USE_OV2311", "USE_BUS_CONTROLLER", "USE_UC593C"],
+            "defines": [],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "gnu17",
             "cppStandard": "gnu++14",

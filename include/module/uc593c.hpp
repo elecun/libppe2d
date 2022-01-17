@@ -13,13 +13,23 @@
 #define _MODULE_US593_HPP_
 
 #include <include/core/iController.hpp>
+#include <string>
+
+using namespace std;
 
 namespace ppe::controller {
 
     class uc593c : public iController {
+
+
         public:
-            uc593c() = default;
+            uc593c(const char* config):_config_file(config){
+
+            }
             virtual ~uc593c() = default;
+
+        private:
+            string _config_file {""};
     }; 
 
 } /* end namespace */

@@ -12,6 +12,30 @@
 
 namespace ppe {
 
+    /* input source */
+    enum class SOURCE : int {
+        UNKNOWN,
+        CAMERA,
+        IMAGE,
+        VIDEO
+    };
+
+    /* camera bus controllers */
+    enum class BUS : int {
+        UNKNOWN,
+        MIPI,
+        USB, //USB General (UVC)
+        USB3
+    };
+
+    /* CMOS with Bus Interface */
+    enum class CMOS : int {
+        UNKNOWN,
+        OV2311_UC593C,
+        OV2311_UC621B,
+        OV2311_UVC
+    };
+
     /* handling for signal event */
     void cleanup(int sig) {
         switch(sig)

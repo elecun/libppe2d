@@ -26,38 +26,27 @@
 #include <include/core/iController.hpp>
 
 /* to use camera device for ov2311 with USB3.0 or MIPI interface */
-#if defined(USE_SOURCE_CAMERA)
-    #if defined(USE_OV2311)
-        #include <module/ov2311.hpp>
-    #endif
+#include <module/ov2311_uc593c.hpp>
+#include <module/uc593c.hpp> //for usb 3.0 bus controller with uc621 MIPI controller
+#include <module/uc621b.hpp> //for MIPI bus controller
 
-    #if defined(USE_BUS_CONTROLLER)
-        #if defined(USE_UC593C)
-            #include <module/uc593c.hpp>
-        #endif
-    #endif
-#endif
 
 /* global variables */
 ppe::source::driver* g_source = nullptr;
 
-
-/* input source */
-enum SOURCES : int {
-    UNKNOWN = 0,
-    CAMERA,
-    IMAGE,
-    VIDEO
-};
-
 using namespace std;
+
 
 /* cleanup the program */
 void cleanup(int sig) {
+    if(g_source){
+        g_source->close();
+        delete g_source;
+    }
+
     ppe::cleanup(sig);
     exit(EXIT_SUCCESS);
 }
-
 
 
 /* main entry */
@@ -67,31 +56,41 @@ int main(int argc, char** argv){
     
     /* parse arguments */
     int optc = 0;
-    int _source = SOURCES::IMAGE;
-    while((optc=getopt(argc, argv, "s:p:h"))!=-1)
+    ppe::SOURCE _source = ppe::SOURCE::CAMERA;
+    ppe::CMOS _cmos = ppe::CMOS::OV2311_UC593C; //OV2311+USB3.0
+    
+    while((optc=getopt(argc, argv, "s:c:h"))!=-1)
     {
         switch(optc){
             /* source selection */
             case 's': {
                 string src = optarg;
-                if(!src.compare("camera")) _source = SOURCES::CAMERA;
-                else if(!src.compare("image")) _source = SOURCES::IMAGE;
-                else if(!src.compare("video")) _source = SOURCES::VIDEO;
-                else { _source = SOURCES::UNKNOWN; spdlog::error("{} is unknown source.", src); }
+                if(!src.compare("camera")) _source = ppe::SOURCE::CAMERA;
+                else if(!src.compare("image")) _source = ppe::SOURCE::IMAGE;
+                else if(!src.compare("video")) _source = ppe::SOURCE::VIDEO;
+                else { 
+                    _source = ppe::SOURCE::UNKNOWN; 
+                    spdlog::warn("Unknown input source : {}", src); }
             } break;
 
-            /* read camera parameters */
-            case 'p': {
-                string _cam_param = optarg;
-                
-            } break;
+            /* CMOS sensor model */
+            case 'c': {
+                string cmos = optarg;
+                if(!cmos.compare("ov2311_uc593c")) _cmos = ppe::CMOS::OV2311_UC593C;
+                else if(!cmos.compare("ov2311_uc621b")) _cmos = ppe::CMOS::OV2311_UC621B;
+                else { 
+                    _cmos = ppe::CMOS::UNKNOWN; 
+                    spdlog::warn("Unknown CMOS with Interface : {}", cmos);
+                }
+            }
+            break;
 
             /* help & unkown options */
             case 'h':
             default:
                 cout << fmt::format("PPE Application (built {}/{})", __DATE__, __TIME__) << endl;
-                cout << "Usage: ppe [-s source<camera|image|video>] [-p parameter_file] [-h]" << endl;
-                exit(EXIT_FAILURE);
+                cout << "Usage: ppe [-s source<camera|image|video>] [-c CMOS sensor <ov2311_uc593c|ov2311_uc621b>] [-h]" << endl;
+                cleanup(SIGTERM);
             break;
         }
     }
@@ -99,25 +98,37 @@ int main(int argc, char** argv){
 
     /* source selection  */
     switch(_source){
-        case SOURCES::IMAGE: { } break;
-        case SOURCES::VIDEO: { } break;
-        case SOURCES::CAMERA: {
-            #if defined(USE_SOURCE_CAMERA)
-                #if defined(USE_OV2311)
-                    g_source = new ppe::camera::ov2311();
-                    #if defined(USE_UC593C)
-                        g_source->set_bus(new ppe::controller::uc593c);
-                    #endif
-                    g_source->open();
-                #endif
-            #endif
+        case ppe::SOURCE::IMAGE: { } break;
+        case ppe::SOURCE::VIDEO: { } break;
+        case ppe::SOURCE::CAMERA: {
+
+            /* select cmos sensor */
+            switch(_cmos){
+                case ppe::CMOS::OV2311_UC593C: {
+                    g_source = new ppe::cmos::ov2311_uc593c("OV2311_MIPI_2Lane_RAW10_10b_1600x1300.cfg");
+                    if(!g_source->open()) {
+                        cleanup(SIGTERM);
+                    }
+                } break;
+            }
+
+        } break;
+        case ppe::SOURCE::UNKNOWN: {
+
         } break;
     }
 
-    /* image processing */
-    if(g_source->valid()){
-        
+    /* processing */
+    while(1){
+        /* image processing */
+        if(g_source->is_valid()){
+            cv::Mat final = g_source->capture();
+            cv::imshow("View", final);
+            cv::waitKey(1);
+        }
     }
+
+    
 
     
 
