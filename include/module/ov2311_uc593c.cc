@@ -11,7 +11,6 @@
 #include <string>
 #include <sys/types.h> 
 #include <sys/stat.h> 
-#include "arducam_config_parser.h"
 
 using namespace std;
 
