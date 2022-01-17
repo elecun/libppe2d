@@ -1,1 +1,0 @@
-# PPE with Image file(s)
