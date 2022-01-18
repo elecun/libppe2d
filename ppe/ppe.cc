@@ -91,6 +91,7 @@ int main(int argc, char** argv){
             default:
                 cout << fmt::format("PPE Application (built {}/{})", __DATE__, __TIME__) << endl;
                 cout << "Usage: ppe [-s source<camera|image|video>] [-c CMOS sensor <ov2311_uc593c|ov2311_uc621b>] [-h]" << endl;
+                cleanup(SIGTERM);
             break;
         }
     }
@@ -108,7 +109,7 @@ int main(int argc, char** argv){
                 case ppe::CMOS::OV2311_UC593C: {
                     g_source = new ppe::cmos::ov2311_uc593c("./OV2311_MIPI_2Lane_RAW10_10b_1600x1300.cfg");
                     if(g_source->open()) {
-                            _ready = true;
+                        _ready = true;
                     }
                 } break;
                 case ppe::CMOS::OV2311_UC621B: {
@@ -143,9 +144,7 @@ int main(int argc, char** argv){
         cleanup(SIGTERM);
     }
 
-    
-
-    
+  
 
     /* processing */
 
