@@ -43,6 +43,7 @@ void cleanup(int sig) {
         g_source->close();
         delete g_source;
     }
+    cv::destroyAllWindows();
 
     ppe::cleanup(sig);
     exit(EXIT_SUCCESS);
@@ -90,13 +91,13 @@ int main(int argc, char** argv){
             default:
                 cout << fmt::format("PPE Application (built {}/{})", __DATE__, __TIME__) << endl;
                 cout << "Usage: ppe [-s source<camera|image|video>] [-c CMOS sensor <ov2311_uc593c|ov2311_uc621b>] [-h]" << endl;
-                cleanup(SIGTERM);
             break;
         }
     }
 
 
     /* source selection  */
+    bool _ready = false;    //ready to open
     switch(_source){
         case ppe::SOURCE::IMAGE: { } break;
         case ppe::SOURCE::VIDEO: { } break;
@@ -105,10 +106,19 @@ int main(int argc, char** argv){
             /* select cmos sensor */
             switch(_cmos){
                 case ppe::CMOS::OV2311_UC593C: {
-                    g_source = new ppe::cmos::ov2311_uc593c("OV2311_MIPI_2Lane_RAW10_10b_1600x1300.cfg");
-                    if(!g_source->open()) {
-                        cleanup(SIGTERM);
+                    g_source = new ppe::cmos::ov2311_uc593c("./OV2311_MIPI_2Lane_RAW10_10b_1600x1300.cfg");
+                    if(g_source->open()) {
+                            _ready = true;
                     }
+                } break;
+                case ppe::CMOS::OV2311_UC621B: {
+                    
+                } break;
+                case ppe::CMOS::OV2311_UVC: {
+
+                } break;
+                case ppe::CMOS::UNKNOWN: {
+
                 } break;
             }
 
@@ -118,14 +128,19 @@ int main(int argc, char** argv){
         } break;
     }
 
-    /* processing */
-    while(1){
-        /* image processing */
-        if(g_source->is_valid()){
-            cv::Mat final = g_source->capture();
-            cv::imshow("View", final);
-            cv::waitKey(1);
+    if(_ready){
+        /* processing */
+        while(1){
+            /* image processing */
+            if(g_source->is_valid()){
+                cv::Mat final = g_source->capture();
+                cv::imshow("View", final);
+                cv::waitKey(1);
+            }
         }
+    }
+    else {
+        cleanup(SIGTERM);
     }
 
     

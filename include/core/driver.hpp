@@ -25,8 +25,8 @@ namespace ppe::source {
 
     class driver {
         public:
-            driver() { };
-            virtual ~driver(){ };
+            driver() = default;
+            virtual ~driver() = default;
 
             /**
              * @brief set bus controller instance into the driver
@@ -63,6 +63,14 @@ namespace ppe::source {
              * 
              */
             virtual cv::Mat capture() = 0;
+
+            /**
+             * @brief init camera device
+             * 
+             * @return true if success
+             * @return false if failed
+             */
+            virtual bool init() = 0;
 
     };
     

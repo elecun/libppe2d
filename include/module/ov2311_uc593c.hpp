@@ -15,8 +15,9 @@
 #include <string>
 #include <memory>
 #include <core/driver.hpp>
-
-#include "module/ArduCamLib.h"
+#include <thread>
+#include <module/arducam_config_parser.h>
+#include <module/ArduCamLib.h>
 
 using namespace std;
 
@@ -30,19 +31,26 @@ namespace ppe::cmos {
 
             void set_bus(ppe::controller::iController* bus) override;
             bool open() override;
+            bool init() override;
             void close() override;
             bool is_valid() override;
             cv::Mat capture() override;
+
+        private:
+            cv::Mat convert(ArduCamOutData* framedata);
+            void config_board(ArduCamHandle &cameraHandle, Config config);
+            bool configure(const char* filename, ArduCamHandle &handle, ArduCamCfg &config);    //arducam configurations
+            cv::Mat dBytesToMat(Uint8* bytes, int bit_width, int width, int height);
+            cv::Mat BytestoMat(Uint8* bytes, int width, int height);
 
         protected:
             ppe::controller::iController* _controller = nullptr;
 
         private:
-            string _config_file {""};
-
-            ArduCamCfg cameraCfg;
-            ArduCamIndexinfo pUsbIdxArray[16];
-            int _camera_num = 0;
+            string _config_file {""}; //camear configuration file
+            ArduCamHandle _handle;  //camera handle
+            ArduCamCfg _config; //camera configurations
+            std::thread* _capture_thread = nullptr;
 
     };
 
