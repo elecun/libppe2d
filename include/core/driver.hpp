@@ -23,6 +23,13 @@ using namespace std;
 namespace ppe::controller { class iController; }
 namespace ppe::source {
 
+    typedef struct _resolution {
+			int width;
+			int height;
+			_resolution():width(0), height(0) {}
+			_resolution(int w, int h):width(w), height(h){ }
+		} resolution;
+
     class driver {
         public:
             driver() = default;
@@ -56,6 +63,12 @@ namespace ppe::source {
              * 
              */
             virtual cv::Mat capture() = 0;
+
+        public:
+            cv::Mat camera_matrix;
+            cv::Mat distortion_coeff;
+            int width = 0;
+            int height = 0;
 
     };
     

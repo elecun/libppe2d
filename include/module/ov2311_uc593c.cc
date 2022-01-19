@@ -46,7 +46,8 @@ namespace ppe::cmos {
     }
 
     ov2311_uc593c::ov2311_uc593c(const char* config, unsigned int max_fps):_config_file(config), _max_fps(max_fps) {
-
+        camera_matrix = (cv::Mat1d(3,3) << _FX_, 0., _CX_, 0., _FY_, _CY_, 0., 0., 1.);
+        distortion_coeff = (cv::Mat1d(1,5) << _K1_, _K2_, 0, _P1_, _P2_);
     }
     
     ov2311_uc593c::~ov2311_uc593c(){
@@ -77,9 +78,9 @@ namespace ppe::cmos {
     }
 
     void ov2311_uc593c::close(){
+        spdlog::info("Closed camera device");
         _running = false;
 		_capture_thread->join();
-        
         ArduCam_close(_handle);
     }
 
@@ -90,9 +91,8 @@ namespace ppe::cmos {
     cv::Mat ov2311_uc593c::convert(ArduCamOutData* frameData){
         cv::Mat rawImage;
         Uint8* data = frameData->pu8ImageData;
-        int height, width;
-        width = _config.u32Width;
-        height = _config.u32Height;
+        this->width = _config.u32Width;
+        this->height = _config.u32Height;
 
         switch (_config.emImageFmtMode){
             case FORMAT_MODE_RGB:
@@ -126,10 +126,10 @@ namespace ppe::cmos {
                 break;
             case FORMAT_MODE_RAW:
                 if (_config.u8PixelBytes == 2) {
-                    rawImage = dBytesToMat(data, frameData->stImagePara.u8PixelBits, width, height);
+                    rawImage = dBytesToMat(data, frameData->stImagePara.u8PixelBits, this->width, this->height);
                 }
                 else {
-                    rawImage = BytestoMat(data, width, height);
+                    rawImage = BytestoMat(data, this->width, this->height);
                 }
                 break;
             case FORMAT_MODE_YUV:
