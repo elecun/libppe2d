@@ -26,12 +26,10 @@ namespace ppe::cmos {
 
     class ov2311_uc593c : public ppe::source::driver {
         public:
-            ov2311_uc593c(const char* config);
+            ov2311_uc593c(const char* config, unsigned int max_fps = 5);
             virtual ~ov2311_uc593c();
 
-            void set_bus(ppe::controller::iController* bus) override;
             bool open() override;
-            bool init() override;
             void close() override;
             bool is_valid() override;
             cv::Mat capture() override;
@@ -47,9 +45,8 @@ namespace ppe::cmos {
             ppe::controller::iController* _controller = nullptr;
 
         private:
-            string _config_file {""}; //camear configuration file
-            ArduCamHandle _handle;  //camera handle
-            ArduCamCfg _config; //camera configurations
+            string _config_file  = ""; //camera configuration file
+            unsigned int _max_fps = 5;
             std::thread* _capture_thread = nullptr;
 
     };

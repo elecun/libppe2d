@@ -7,56 +7,21 @@
 
 OS := $(shell uname)
 
-#Set Architecutre
-ARCH := armhf
-
-OSFLAG	:=
-ifeq ($(OS),Windows_NT)
-	OSFLAG += -D WIN32
-	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
-		OSFLAG += -D AMD64
-	endif
-	ifeq ($(PROCESSOR_ARCHITECTURE),x86)
-		OSFLAG += -D IA32
-	endif
-else
-	UNAME_S := $(shell uname -s)
-	ifeq ($(UNAME_S),Linux)
-		OSFLAG += -D LINUX
-	endif
-	ifeq ($(UNAME_S),Darwin)
-		OSFLAG += -D OSX
-		INCLUDE_DIR = -I/opt/homebrew/Cellar/opencv/4.5.4_2/include/opencv4
-	endif
-		UNAME_P := $(shell uname -p)
-	ifeq ($(UNAME_P),x86_64)
-		OSFLAG += -D AMD64
-	endif
-		ifneq ($(filter %86,$(UNAME_P)),)
-	OSFLAG += -D IA32
-		endif
-	ifneq ($(filter arm%,$(UNAME_P)),)
-		OSFLAG += -D ARM
-	endif
-endif
-
-
 
 #Compilers
 
-#CC := /usr/bin/arm-linux-gnueabihf-g++-8
-#GCC := /usr/bin/arm-linux-gnueabihf-gcc-8
+
 CC := g++
 GCC := gcc
 OUTDIR		= ./bin/
 BUILDDIR		= ./bin/
 INCLUDE_DIR += -I./ -I./include/
-LD_LIBRARY_PATH += -L/usr/local/lib/ -L./lib/libarducam/
+LD_LIBRARY_PATH += -L./lib/x86/Arducam_SDK/
 
 
 # OS
 ifeq ($(OS),Linux) #for Linux
-	LDFLAGS = -Wl,--export-dynamic -Wl,-rpath=$(LD_LIBRARY_PATH)
+	LDFLAGS = -Wl,--export-dynamic
 	LDLIBS =  -lArduCamLib -lpthread -larducam_config_parser `pkg-config --cflags --libs opencv4` -lusb-1.0
 	GTEST_LDLIBS = -lgtest
 else

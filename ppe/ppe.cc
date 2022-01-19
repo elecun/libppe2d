@@ -107,7 +107,7 @@ int main(int argc, char** argv){
             /* select cmos sensor */
             switch(_cmos){
                 case ppe::CMOS::OV2311_UC593C: {
-                    g_source = new ppe::cmos::ov2311_uc593c("./OV2311_MIPI_2Lane_RAW10_10b_1600x1300.cfg");
+                    g_source = new ppe::cmos::ov2311_uc593c("./OV2311_MIPI_2Lane_RAW10_10b_1600x1300.cfg", 30);
                     if(g_source->open()) {
                         _ready = true;
                     }
@@ -133,10 +133,13 @@ int main(int argc, char** argv){
         /* processing */
         while(1){
             /* image processing */
+            cv::namedWindow("Camera", cv::WINDOW_AUTOSIZE);
             if(g_source->is_valid()){
-                cv::Mat final = g_source->capture();
-                cv::imshow("View", final);
-                cv::waitKey(1);
+                cv::Mat raw = g_source->capture();
+                if(!raw.empty()){
+                    cv::imshow("Camera", raw);
+                }
+                cv::waitKey(10);
             }
         }
     }

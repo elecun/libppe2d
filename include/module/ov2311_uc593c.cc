@@ -11,23 +11,27 @@
 #include <string>
 #include <sys/types.h> 
 #include <sys/stat.h> 
+#include <chrono>
 
 using namespace std;
 
 
-static bool _running = false;
+static bool _running = true;
+static ArduCamHandle _handle;  //camera handle
+static ArduCamCfg _config; //camera configurations
+
 namespace ppe::cmos {
 
     /* image capture thread function */
     void captureImage_thread(ArduCamHandle handle) {
-        Uint32 rtn_val = ArduCam_beginCaptureImage(handle);
+        Uint32 rtn_val = ArduCam_beginCaptureImage(_handle);
         if(rtn_val==USB_CAMERA_USB_TASK_ERROR) {
             spdlog::error("Error beginning capture({})", rtn_val);
             return;
         }
 
         while(_running){
-            rtn_val = ArduCam_captureImage(handle);
+            rtn_val = ArduCam_captureImage(_handle);
             if(rtn_val==USB_CAMERA_USB_TASK_ERROR) {
                 spdlog::error("Error beginning capture image({})", rtn_val);
                 break;
@@ -37,20 +41,16 @@ namespace ppe::cmos {
             }
         }
         _running = false;
-        ArduCam_endCaptureImage(handle);
+        ArduCam_endCaptureImage(_handle);
         spdlog::info("Capture image thread stopped");
     }
 
-    ov2311_uc593c::ov2311_uc593c(const char* config):_config_file(config){
+    ov2311_uc593c::ov2311_uc593c(const char* config, unsigned int max_fps):_config_file(config), _max_fps(max_fps) {
 
     }
     
     ov2311_uc593c::~ov2311_uc593c(){
-
-    }
-
-    void ov2311_uc593c::set_bus(ppe::controller::iController* bus){
-        _controller = bus;
+        _running = false;
     }
 
     bool ov2311_uc593c::open(){
@@ -65,24 +65,21 @@ namespace ppe::cmos {
             return false;
         }
 
+        this_thread::sleep_for(std::chrono::milliseconds(2000)); //wait for 2 sec, hardware bug?
+
         //2. read camera configuration from file
         if(this->configure(_config_file.c_str(), _handle, _config)){
             ArduCam_setMode(_handle, CONTINUOUS_MODE);
             _capture_thread = new thread(captureImage_thread, _handle);
-            //_read_thread = new thread(ov2311_uc593c::readImage_thread, _handle);
             return true;
         }
         return false;
     }
 
-    bool ov2311_uc593c::init(){
-        return false;
-    }
-
     void ov2311_uc593c::close(){
-        //_read_thread->join();
+        _running = false;
 		_capture_thread->join();
-
+        
         ArduCam_close(_handle);
     }
 
@@ -99,9 +96,11 @@ namespace ppe::cmos {
 
         switch (_config.emImageFmtMode){
             case FORMAT_MODE_RGB:
+                spdlog::info("FORMAT MODE : FORMAT_MODE_RGB");
                 //rawImage = RGB565toMat(data, width, height);
                 break;
             case FORMAT_MODE_RAW_D:
+                spdlog::info("FORMAT MODE : FORMAT_MODE_RAW_D");
                 /*rawImage = separationImage(data, width, height);
                 switch (color_mode) {
                 case RAW_RG:cv::cvtColor(rawImage, rawImage, cv::COLOR_BayerRG2BGR);
@@ -118,9 +117,11 @@ namespace ppe::cmos {
                 }*/
                 break;
             case FORMAT_MODE_MON_D:
+                spdlog::info("FORMAT MODE : FORMAT_MODE_MON_D");
                 //rawImage = separationImage(data, width, height);
                 break;
             case FORMAT_MODE_JPG:
+                spdlog::info("FORMAT MODE : FORMAT_MODE_JPG");
                 //rawImage = JPGToMat(data, frameData->stImagePara.u32Size);
                 break;
             case FORMAT_MODE_RAW:
@@ -132,9 +133,11 @@ namespace ppe::cmos {
                 }
                 break;
             case FORMAT_MODE_YUV:
+                spdlog::info("FORMAT MODE : FORMAT_MODE_YUV");
                 //rawImage = YUV422toMat(data, width, height);
                 break;
             case FORMAT_MODE_MON:
+                spdlog::info("FORMAT MODE : FORMAT_MODE_MON");
                 /*if (cameraCfg.u8PixelBytes == 2) {
                     rawImage = dBytesToMat(data, frameData->stImagePara.u8PixelBits, width, height);
                 }
@@ -143,6 +146,7 @@ namespace ppe::cmos {
                 }*/
                 break;
             default:
+                spdlog::info("FORMAT MODE : DEFAULT");
                 /*if (cameraCfg.u8PixelBytes == 2) {
                     rawImage = dBytesToMat(data, frameData->stImagePara.u8PixelBits, width, height);
                 }
@@ -162,10 +166,16 @@ namespace ppe::cmos {
             ArduCamOutData* frameData;
             Uint32 rtn_val = ArduCam_readImage(_handle, frameData);
             if(rtn_val==USB_CAMERA_NO_ERROR){
-                return convert(frameData);
+                cv::Mat raw = convert(frameData);
+                if(raw.empty()){
+                    spdlog::error("Image FIFO is empty");
+                }
+                else {
+                    ArduCam_del(_handle);
+                    return raw;
+                }
             }
         }
-
         return cv::Mat();
     }
 
@@ -182,59 +192,64 @@ namespace ppe::cmos {
         memset(&cfgs, 0x00, sizeof(CameraConfigs));
 
         //1. read config file parse
-        if(arducam_parse_config(filename, &cfgs)) {
+        int parse_res = arducam_parse_config(filename, &cfgs);
+        if(parse_res) {
             spdlog::error("Cannot find configuration file : {}", filename);
             return false;
         }
 
-        // CameraParam* cam_param = &cfgs.camera_param;
-        // Config* configs = cfgs.configs;
-        int configs_length = cfgs.configs_length;
-
         // set I2C mode
+        spdlog::info("Set camera config I2C Mode : {}", cfgs.camera_param.i2c_mode);
         switch(cfgs.camera_param.i2c_mode){
-            case 0: config.emI2cMode = I2C_MODE_8_8; break;
-            case 1: config.emI2cMode = I2C_MODE_8_16; break;
-            case 2: config.emI2cMode = I2C_MODE_16_8; break;
-            case 3: config.emI2cMode = I2C_MODE_16_16; break;
+            case 0: _config.emI2cMode = I2C_MODE_8_8; break;
+            case 1: _config.emI2cMode = I2C_MODE_8_16; break;
+            case 2: _config.emI2cMode = I2C_MODE_16_8; break;
+            case 3: _config.emI2cMode = I2C_MODE_16_16; break;
             default: break;
         }
 
         // set Color format
-        int color_mode = (cfgs.camera_param.format&0xff);
-        switch(cfgs.camera_param.format>>8){
-            case 0: config.emImageFmtMode = FORMAT_MODE_RAW; break;
-            case 1: config.emImageFmtMode = FORMAT_MODE_RGB; break;
-            case 2: config.emImageFmtMode = FORMAT_MODE_YUV; break;
-            case 3: config.emImageFmtMode = FORMAT_MODE_JPG; break;
-            case 4: config.emImageFmtMode = FORMAT_MODE_MON; break;
-            case 5: config.emImageFmtMode = FORMAT_MODE_RAW_D; break;
-            case 6: config.emImageFmtMode = FORMAT_MODE_MON_D; break;
+        //int color_mode = (cfgs.camera_param.format&0xff);
+        uint16_t format_mode = cfgs.camera_param.format>>8;
+        spdlog::info("Set camera config image format mode : {}", format_mode);
+        switch(format_mode){
+            case 0: _config.emImageFmtMode = FORMAT_MODE_RAW; break;
+            case 1: _config.emImageFmtMode = FORMAT_MODE_RGB; break;
+            case 2: _config.emImageFmtMode = FORMAT_MODE_YUV; break;
+            case 3: _config.emImageFmtMode = FORMAT_MODE_JPG; break;
+            case 4: _config.emImageFmtMode = FORMAT_MODE_MON; break;
+            case 5: _config.emImageFmtMode = FORMAT_MODE_RAW_D; break;
+            case 6: _config.emImageFmtMode = FORMAT_MODE_MON_D; break;
             default: break;
         }
 
         // set other parameters
-        config.u32Width = cfgs.camera_param.width;
-        config.u32Height = cfgs.camera_param.height;
-        config.u32I2cAddr = cfgs.camera_param.i2c_addr;
-        config.u8PixelBits = cfgs.camera_param.bit_width;
-        config.u32TransLvl = cfgs.camera_param.trans_lvl;
+        _config.u32Width = cfgs.camera_param.width;
+        _config.u32Height = cfgs.camera_param.height;
+        _config.u32I2cAddr = cfgs.camera_param.i2c_addr;
+        _config.u8PixelBits = cfgs.camera_param.bit_width;
+        _config.u32TransLvl = cfgs.camera_param.trans_lvl;
+        spdlog::info("Set image size : {}x{}", cfgs.camera_param.width, cfgs.camera_param.height);
+        spdlog::info("Set I2C Address : {}", cfgs.camera_param.i2c_addr);
+        spdlog::info("Set Bit width : {}", cfgs.camera_param.bit_width);
+        spdlog::info("Set Trans level : {}", cfgs.camera_param.trans_lvl);
 
-        if(config.u8PixelBits<=8){ config.u8PixelBytes = 1; }
-        else if(config.u8PixelBits>8 && config.u8PixelBits<=16){
-            config.u8PixelBytes = 2;
+        if(_config.u8PixelBits<=8){ _config.u8PixelBytes = 1; }
+        else if(_config.u8PixelBits>8 && _config.u8PixelBits<=16){
+            _config.u8PixelBytes = 2;
             //save_raw = true;
         }
 
         //2. open
-        if(ArduCam_autoopen(handle, &config)==USB_CAMERA_NO_ERROR){
+        int res = ArduCam_autoopen(_handle, &_config);
+        if(res==USB_CAMERA_NO_ERROR){
             for(unsigned int i=0; i<cfgs.configs_length; i++){
                 uint32_t type = cfgs.configs[i].type;
-                if (((type >> 16) & 0xFF) && ((type >> 16) & 0xFF) != config.usbType)
+                if (((type >> 16) & 0xff) && ((type >> 16) & 0xff) != config.usbType)
                     continue;
-                switch (type & 0xFFFF) {
+                switch (type & 0xffff) {
                 case CONFIG_TYPE_REG: { ArduCam_writeSensorReg(handle, cfgs.configs[i].params[0], cfgs.configs[i].params[1]); } break;
-                case CONFIG_TYPE_DELAY: { usleep(1000 * cfgs.configs[i].params[0]); } break;
+                case CONFIG_TYPE_DELAY: { usleep(1000*cfgs.configs[i].params[0]); } break;
                 case CONFIG_TYPE_VRCMD: { config_board(handle, cfgs.configs[i]); } break;
                 }
             }
@@ -242,12 +257,19 @@ namespace ppe::cmos {
             ArduCam_registerCtrls(handle, cfgs.controls, cfgs.controls_length);
         }
         else {
-            spdlog::error("Cannot open camera device");
+            switch(res){
+                case USB_CAMERA_USB_CREATE_ERROR: spdlog::error("USB create error"); break;
+                case USB_CAMERA_USB_SET_CONTEXT_ERROR: spdlog::error("USB set context error"); break;
+                case USB_CAMERA_VR_COMMAND_ERROR: spdlog::error("USB Vendor command error"); break;
+                case USB_CAMERA_USB_VERSION_ERROR: spdlog::error("USB version error"); break;
+                case USB_CAMERA_BUFFER_ERROR: spdlog::error("Camera buffer error"); break;
+                case USB_CAMERA_NOT_FOUND_DEVICE_ERROR: spdlog::error("Camera not found device error"); break;
+            }
             return false;
         }
 
         // set framerate
-        ArduCam_setCtrl(handle, "setFramerate", 5);
+        ArduCam_setCtrl(handle, "setFramerate", (Int64)_max_fps);
 
         return true;
     }

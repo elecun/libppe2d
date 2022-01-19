@@ -3,6 +3,7 @@
         "v4l2-controls.h": "c",
         "exception": "cpp",
         "fstream": "cpp",
-        "locale": "cpp"
+        "locale": "cpp",
+        "*.ipp": "cpp"
     }
 }
