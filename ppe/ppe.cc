@@ -133,26 +133,27 @@ int main(int argc, char** argv){
     if(_ready){
         /* processing */
         bool rectified = false;
+        cv::Mat undistorMapx, undistorMapy; //undistortion map
+        cv::Mat newCameraMatrix;    //optimal camera matrix
         while(1){
             /* image processing */
             cv::namedWindow("Camera", cv::WINDOW_AUTOSIZE);
             if(g_source->is_valid()){
                 cv::Mat raw = g_source->capture();
+                cv::Mat rectified_raw;
                 if(!raw.empty()){
 
                     if(!rectified){
+                        //1. calc undistortion map
+                        cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 0);
+                        cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
                         rectified = true;
                     }
                     else{
-
+                        cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
                         cv::imshow("Camera", raw);
+                        cv::imshow("Camera_Undistortion", rectified_raw);
                     }
-                    //1. calc undistortion map
-                    cv::Mat undistorMapx, undistorMapy;
-                    cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 0);
-                    cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
-
-                    cv::imshow("Camera", raw);
                 }
                 int key = cv::waitKey(10);
                 switch(key){
