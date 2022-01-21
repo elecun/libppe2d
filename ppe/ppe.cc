@@ -31,30 +31,84 @@
 #include <module/uc593c.hpp> //for usb 3.0 bus controller with uc621 MIPI controller
 #include <module/uc621b.hpp> //for MIPI bus controller
 
-
+using namespace std;
 
 /* global variables */
 ppe::source::driver* g_source = nullptr;
 
-using namespace std;
-
+/* calc fps */
+int show_fps(){
+    static int frame_count = 0;
+	static time_t beginTime = time(NULL);
+    frame_count++;
+	if((time(NULL)-beginTime)>=1)
+	{
+		beginTime = time(NULL);
+        spdlog::info("Fps : {}", frame_count);
+		frame_count = 0;
+	}
+    return frame_count;
+}
 
 /* terminate the program */
-void terminate(int sig) {
-    if(g_source){
-        g_source->close();
-        delete g_source;
+    void destroy() {
+        if(g_source){
+            g_source->close();
+            delete g_source;
+        }
+        cv::destroyAllWindows();
+        exit(EXIT_SUCCESS);
     }
-    cv::destroyAllWindows();
-    ppe::cleanup(sig);
-    exit(EXIT_SUCCESS);
-}
+
+    /* handling for signal event */
+    void cleanup(int sig) {
+        switch(sig)
+        {
+            case SIGSEGV: { spdlog::warn("Segmentation violation"); } break;
+            case SIGABRT: { spdlog::warn("Abnormal termination"); } break;
+            case SIGKILL: { spdlog::warn("Process killed"); } break;
+            case SIGBUS: { spdlog::warn("Bus Error"); } break;
+            case SIGTERM: { spdlog::warn("Termination requested"); } break;
+            case SIGINT: { spdlog::warn("interrupted"); } break;
+            default:
+            spdlog::info("Cleaning up the program");
+        }
+
+        destroy();
+            
+        spdlog::info("Successfully terminated");
+        exit(EXIT_SUCCESS);
+    }
+
+    /* signal setting into main thread */
+    void signal_set(){
+        const int signals[] = { SIGINT, SIGTERM, SIGBUS, SIGKILL, SIGABRT, SIGSEGV };
+
+        for(const int& s:signals)
+            signal(s, cleanup);
+
+        //signal masking
+        sigset_t sigmask;
+        if(!sigfillset(&sigmask)){
+            for(int signal:signals)
+                sigdelset(&sigmask, signal); //delete signal from mask
+        }
+        else {
+            spdlog::error("Signal Handling Error");
+            cleanup(0);
+        }
+
+        if(pthread_sigmask(SIG_SETMASK, &sigmask, nullptr)!=0){ // signal masking for this thread(main)
+            spdlog::error("Signal Masking Error");
+            cleanup(0);
+        }
+    }
 
 
 /* main entry */
 int main(int argc, char** argv){
     spdlog::stdout_color_st("console");
-    ppe::signal_set();
+    signal_set();
     
     /* parse arguments */
     int optc = 0;
@@ -92,7 +146,7 @@ int main(int argc, char** argv){
             default:
                 cout << fmt::format("PPE Application (built {}/{})", __DATE__, __TIME__) << endl;
                 cout << "Usage: ppe [-s source<camera|image|video>] [-c CMOS sensor <ov2311_uc593c|ov2311_uc621b>] [-h]" << endl;
-                terminate(SIGTERM);
+                destroy();
             break;
         }
     }
@@ -137,22 +191,61 @@ int main(int argc, char** argv){
         cv::Mat newCameraMatrix;    //optimal camera matrix
         while(1){
             /* image processing */
-            cv::namedWindow("Camera", cv::WINDOW_AUTOSIZE);
             if(g_source->is_valid()){
                 cv::Mat raw = g_source->capture();
                 cv::Mat rectified_raw;
+                cv::Mat rectified_color;
                 if(!raw.empty()){
 
                     if(!rectified){
                         //1. calc undistortion map
-                        cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 0);
+                        cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
                         cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
                         rectified = true;
                     }
                     else{
+                        //1. generate undist image with linear interpolation
                         cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
-                        cv::imshow("Camera", raw);
-                        cv::imshow("Camera_Undistortion", rectified_raw);
+
+                        //2. preprocessing for optimal source image to processing
+
+                        //3. find aruco marker
+                        cv::Mat aruco_marker;
+                        cv::Ptr<cv::aruco::Dictionary> dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
+                        cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
+                        vector<vector<cv::Point2f>> markerCorners, rejectedCandidates;
+                        vector<int> markerIds;
+                        cv::aruco::detectMarkers(rectified_raw, dict, markerCorners, markerIds, parameters, rejectedCandidates);
+
+                        // 4. draw marker
+                        if(markerIds.size()>0){
+
+                            //spdlog::info("found {} marker(s)", markerIds.size());
+                            //4.1 color converting (grayscale to RGB)
+                            cv::cvtColor(rectified_raw, rectified_color, cv::COLOR_GRAY2RGB);
+
+                            //4.2 draw marker
+                            cv::aruco::drawDetectedMarkers(rectified_color, markerCorners, markerIds);
+
+                            //4.3 marker pose estimation
+                            std::vector<cv::Vec3d> rvecs, tvecs;
+                            cv::aruco::estimatePoseSingleMarkers(markerCorners, 0.005, g_source->camera_matrix, g_source->distortion_coeff, rvecs, tvecs);
+                            spdlog::info("pos : ({}\t{}\t{})",tvecs[3][0]*1000, tvecs[3][1]*1000, tvecs[3][2]*1000); //mm
+
+                            //draw line
+                            cv::line(rectified_color, cv::Point((int)rectified_color.cols/2, 0), cv::Point((int)rectified_color.cols/2, rectified_color.rows), cv::Scalar(0,255,0));
+                            cv::line(rectified_color, cv::Point(0, (int)rectified_color.rows/2), cv::Point(rectified_color.cols, (int)rectified_color.rows/2), cv::Scalar(0,255,0));
+                            
+                            //4.4 draw axis
+                            // for(int i=0; i<(int)markerIds.size(); i++)
+                            //     cv::aruco::drawAxis(rectified_color, g_source->camera_matrix, g_source->distortion_coeff, rvecs[i], tvecs[i], 0.1);
+
+                            // * show fps
+                            show_fps();
+                        }
+
+                        //3. show results
+                        if(!rectified_color.empty()) cv::imshow("Result", rectified_color);
                     }
                 }
                 int key = cv::waitKey(10);
@@ -169,34 +262,19 @@ int main(int argc, char** argv){
                     break;
 
                     case 27: { //Escape
-                        terminate(SIGTERM);
+                        destroy();
                     } break;
                 }
             }
         }
     }
     else {
-        terminate(SIGTERM);
+        destroy();
     }
-
-  
-
-    /* processing */
-
-    // 1. undistortion
-    //cv::Mat map1, map2;
-    //cv::initUndistortRectifyMap(_camera->_camera_matrix, _camera->_distortion_coeff, cv::Mat(), _camera->_camera_matrix, cv::Size(1600, 1300), CV_32FC1, map1, map2);
-
-    //2. aruco marker detection
-    // cv::Mat aruco_marker;
-    // cv::Ptr<cv::aruco::Dictionary> dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_5X5_50);
-    // //cv::Ptr<cv::aruco::Dictionary> dict = cv::aruco::generateCustomDictionary(1, 5);
-    // cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
-
 
     ::pause();
 
-    terminate(SIGTERM);
+    destroy();
     return EXIT_SUCCESS;
 
 }
