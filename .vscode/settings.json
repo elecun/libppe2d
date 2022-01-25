@@ -4,6 +4,7 @@
         "exception": "cpp",
         "fstream": "cpp",
         "locale": "cpp",
-        "*.ipp": "cpp"
+        "*.ipp": "cpp",
+        "thread": "cpp"
     }
 }

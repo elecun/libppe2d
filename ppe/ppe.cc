@@ -21,7 +21,8 @@
 #include "common.hpp"
 #include <memory>
 #include <ctime>
-#include "include/cxxopts.hpp"
+#include <vector>
+#include <include/cxxopts.hpp>
 
 #include <core/driver.hpp>
 #include <include/core/iController.hpp>
@@ -31,10 +32,15 @@
 #include <module/uc593c.hpp> //for usb 3.0 bus controller with uc621 MIPI controller
 #include <module/uc621b.hpp> //for MIPI bus controller
 
+/* for multi tasking */
+#include "task_wafer.hpp"
+#include "task_tool.hpp"
+
 using namespace std;
 
 /* global variables */
 ppe::source::driver* g_source = nullptr;
+ppe::taskmanager* g_taskmanager = nullptr;
 
 /* calc fps */
 int show_fps(){
@@ -57,6 +63,11 @@ int show_fps(){
             delete g_source;
         }
         cv::destroyAllWindows();
+
+        if(g_taskmanager!=nullptr){
+            delete g_taskmanager;
+        }
+            
         exit(EXIT_SUCCESS);
     }
 
@@ -189,65 +200,36 @@ int main(int argc, char** argv){
         bool rectified = false;
         cv::Mat undistorMapx, undistorMapy; //undistortion map
         cv::Mat newCameraMatrix;    //optimal camera matrix
+
+
+        /* create task & run */
+        g_taskmanager = new ppe::taskmanager();
+        g_taskmanager->add("tool", new ppe::task_tool());
+        g_taskmanager->add("wafer", new ppe::task_wafer());
+        g_taskmanager->start();
+
         while(1){
-            /* image processing */
+            /* image capture & preprocessing */
             if(g_source->is_valid()){
                 cv::Mat raw = g_source->capture();
                 cv::Mat rectified_raw;
                 cv::Mat rectified_color;
                 if(!raw.empty()){
-
                     if(!rectified){
                         //1. calc undistortion map
                         cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
                         cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
                         rectified = true;
                     }
-                    else{
+                    else {
                         //1. generate undist image with linear interpolation
                         cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
 
-                        //2. preprocessing for optimal source image to processing
-
-                        //3. find aruco marker
-                        cv::Mat aruco_marker;
-                        cv::Ptr<cv::aruco::Dictionary> dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
-                        cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
-                        vector<vector<cv::Point2f>> markerCorners, rejectedCandidates;
-                        vector<int> markerIds;
-                        cv::aruco::detectMarkers(rectified_raw, dict, markerCorners, markerIds, parameters, rejectedCandidates);
-
-                        // 4. draw marker
-                        if(markerIds.size()>0){
-
-                            //spdlog::info("found {} marker(s)", markerIds.size());
-                            //4.1 color converting (grayscale to RGB)
-                            cv::cvtColor(rectified_raw, rectified_color, cv::COLOR_GRAY2RGB);
-
-                            //4.2 draw marker
-                            cv::aruco::drawDetectedMarkers(rectified_color, markerCorners, markerIds);
-
-                            //4.3 marker pose estimation
-                            std::vector<cv::Vec3d> rvecs, tvecs;
-                            cv::aruco::estimatePoseSingleMarkers(markerCorners, 0.005, g_source->camera_matrix, g_source->distortion_coeff, rvecs, tvecs);
-                            spdlog::info("pos : ({}\t{}\t{})",tvecs[3][0]*1000, tvecs[3][1]*1000, tvecs[3][2]*1000); //mm
-
-                            //draw line
-                            cv::line(rectified_color, cv::Point((int)rectified_color.cols/2, 0), cv::Point((int)rectified_color.cols/2, rectified_color.rows), cv::Scalar(0,255,0));
-                            cv::line(rectified_color, cv::Point(0, (int)rectified_color.rows/2), cv::Point(rectified_color.cols, (int)rectified_color.rows/2), cv::Scalar(0,255,0));
-                            
-                            //4.4 draw axis
-                            // for(int i=0; i<(int)markerIds.size(); i++)
-                            //     cv::aruco::drawAxis(rectified_color, g_source->camera_matrix, g_source->distortion_coeff, rvecs[i], tvecs[i], 0.1);
-
-                            // * show fps
-                            show_fps();
-                        }
-
-                        //3. show results
-                        if(!rectified_color.empty()) cv::imshow("Result", rectified_color);
+                        /* image data transfer to related task */
+                        g_taskmanager->request(rectified_raw);
                     }
                 }
+
                 int key = cv::waitKey(10);
                 switch(key){
                     case 'c':
@@ -266,6 +248,83 @@ int main(int argc, char** argv){
                     } break;
                 }
             }
+            
+            /* image processing */
+            // if(g_source->is_valid()){
+            //     cv::Mat raw = g_source->capture();
+            //     cv::Mat rectified_raw;
+            //     cv::Mat rectified_color;
+            //     if(!raw.empty()){
+
+            //         if(!rectified){
+            //             //1. calc undistortion map
+            //             cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
+            //             cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
+            //             rectified = true;
+            //         }
+            //         else{
+            //             //1. generate undist image with linear interpolation
+            //             cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
+
+            //             //2. preprocessing for optimal source image to processing
+
+            //             //3. find aruco marker
+            //             cv::Mat aruco_marker;
+            //             cv::Ptr<cv::aruco::Dictionary> dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
+            //             cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
+            //             vector<vector<cv::Point2f>> markerCorners, rejectedCandidates;
+            //             vector<int> markerIds;
+            //             cv::aruco::detectMarkers(rectified_raw, dict, markerCorners, markerIds, parameters, rejectedCandidates);
+
+            //             // 4. draw marker
+            //             if(markerIds.size()>0){
+
+            //                 //spdlog::info("found {} marker(s)", markerIds.size());
+            //                 //4.1 color converting (grayscale to RGB)
+            //                 cv::cvtColor(rectified_raw, rectified_color, cv::COLOR_GRAY2RGB);
+
+            //                 //4.2 draw marker
+            //                 cv::aruco::drawDetectedMarkers(rectified_color, markerCorners, markerIds);
+
+            //                 //4.3 marker pose estimation
+            //                 std::vector<cv::Vec3d> rvecs, tvecs;
+            //                 cv::aruco::estimatePoseSingleMarkers(markerCorners, 0.005, g_source->camera_matrix, g_source->distortion_coeff, rvecs, tvecs);
+            //                 spdlog::info("pos : ({}\t{}\t{})",tvecs[3][0]*1000, tvecs[3][1]*1000, tvecs[3][2]*1000); //mm
+
+            //                 //draw line
+            //                 cv::line(rectified_color, cv::Point((int)rectified_color.cols/2, 0), cv::Point((int)rectified_color.cols/2, rectified_color.rows), cv::Scalar(0,255,0));
+            //                 cv::line(rectified_color, cv::Point(0, (int)rectified_color.rows/2), cv::Point(rectified_color.cols, (int)rectified_color.rows/2), cv::Scalar(0,255,0));
+                            
+            //                 //4.4 draw axis
+            //                 // for(int i=0; i<(int)markerIds.size(); i++)
+            //                 //     cv::aruco::drawAxis(rectified_color, g_source->camera_matrix, g_source->distortion_coeff, rvecs[i], tvecs[i], 0.1);
+
+            //                 // * show fps
+            //                 show_fps();
+            //             }
+
+            //             //3. show results
+            //             if(!rectified_color.empty()) cv::imshow("Result", rectified_color);
+            //         }
+            //     }
+            //     int key = cv::waitKey(10);
+            //     switch(key){
+            //         case 'c':
+            //         case 'C':
+            //             if(!raw.empty()){
+            //                 time_t timer = time(nullptr);
+            //                 struct tm* t = localtime(&timer);
+            //                 string filename = fmt::format("capture_{}-{}-{}T{}-{}-{}.jpg", t->tm_year+1900, t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+            //                 cv::imwrite(filename, raw);
+            //                 spdlog::info("saved : {}", filename);
+            //             }
+            //         break;
+
+            //         case 27: { //Escape
+            //             destroy();
+            //         } break;
+            //     }
+            // }
         }
     }
     else {
