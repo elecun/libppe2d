@@ -42,7 +42,6 @@ namespace ppe::cmos {
         }
         _running = false;
         ArduCam_endCaptureImage(_handle);
-        spdlog::info("Capture image thread stopped");
     }
 
     ov2311_uc593c::ov2311_uc593c(const char* config, unsigned int max_fps):_config_file(config), _max_fps(max_fps) {

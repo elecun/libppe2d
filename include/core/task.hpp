@@ -16,8 +16,8 @@
 #include <vector>
 #include <string>
 #include <map>
-#include <condition_variable>
 #include <opencv2/core.hpp>
+#include <include/spdlog/spdlog.h>
 
 using namespace std;
 
@@ -67,6 +67,7 @@ namespace ppe {
 
             virtual void process(cv::Mat data) = 0;
             virtual void request(cv::Mat data) = 0;
+            virtual void wait() = 0;
 
         protected:
             thread* _thread = nullptr;
@@ -190,6 +191,15 @@ namespace ppe {
                 for(auto itr=_task_container.begin();itr!=_task_container.end(); ++itr){
                     if(itr->second->get_status()==task::STATUS::RUNNING)
                         itr->second->request(data);
+                }
+            }
+
+            void wait(){
+                for(auto itr=_task_container.begin();itr!=_task_container.end(); ++itr){
+                    if(itr->second->get_status()==task::STATUS::RUNNING){
+                        itr->second->wait();
+                    }
+                        
                 }
             }
 

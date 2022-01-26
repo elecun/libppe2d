@@ -15,7 +15,7 @@
 
 #include <include/core/task.hpp>
 #include <opencv2/opencv.hpp>
-#include <condition_variable>
+#include <future>
 
 using namespace std;
 
@@ -30,9 +30,10 @@ namespace ppe {
             virtual bool stop();
             virtual void process(cv::Mat data);
             virtual void request(cv::Mat data);
+            virtual void wait();
 
         private:
-            bool is_ready();
+            future<void> _task;
             
 
     }; 

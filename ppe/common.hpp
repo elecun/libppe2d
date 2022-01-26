@@ -33,7 +33,8 @@ namespace ppe {
         UNKNOWN,
         OV2311_UC593C,
         OV2311_UC621B,
-        OV2311_UVC
+        OV2311_UVC,
+        OV2311_UC762C
     };
 
 }

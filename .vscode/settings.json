@@ -5,6 +5,7 @@
         "fstream": "cpp",
         "locale": "cpp",
         "*.ipp": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "future": "cpp"
     }
 }

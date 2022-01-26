@@ -17,20 +17,19 @@
 #include <include/spdlog/spdlog.h>
 #include <include/spdlog/sinks/stdout_color_sinks.h>
 #include <opencv2/opencv.hpp>
-#include <opencv2/aruco.hpp>
 #include "common.hpp"
 #include <memory>
 #include <ctime>
 #include <vector>
 #include <include/cxxopts.hpp>
+#include <future>
 
 #include <core/driver.hpp>
 #include <include/core/iController.hpp>
 
 /* to use camera device for ov2311 with USB3.0 or MIPI interface */
 #include <module/ov2311_uc593c.hpp>
-#include <module/uc593c.hpp> //for usb 3.0 bus controller with uc621 MIPI controller
-#include <module/uc621b.hpp> //for MIPI bus controller
+#include <module/ov2311_uc762c.hpp>
 
 /* for multi tasking */
 #include "task_wafer.hpp"
@@ -123,10 +122,11 @@ int main(int argc, char** argv){
     
     /* parse arguments */
     int optc = 0;
+    int camera_id = 0;
     ppe::SOURCE _source = ppe::SOURCE::CAMERA;
     ppe::CMOS _cmos = ppe::CMOS::OV2311_UC593C; //OV2311+USB3.0
     
-    while((optc=getopt(argc, argv, "s:c:h"))!=-1)
+    while((optc=getopt(argc, argv, "s:c:i:h"))!=-1)
     {
         switch(optc){
             /* source selection */
@@ -145,18 +145,23 @@ int main(int argc, char** argv){
                 string cmos = optarg;
                 if(!cmos.compare("ov2311_uc593c")) _cmos = ppe::CMOS::OV2311_UC593C;
                 else if(!cmos.compare("ov2311_uc621b")) _cmos = ppe::CMOS::OV2311_UC621B;
+                else if(!cmos.compare("ov2311_uc762c")) _cmos = ppe::CMOS::OV2311_UC762C;
                 else { 
                     _cmos = ppe::CMOS::UNKNOWN; 
                     spdlog::warn("Unknown CMOS with Interface : {}", cmos);
                 }
             }
             break;
+            case 'i':{
+                camera_id = atoi(optarg);
+                spdlog::info("Camera ID : {}", camera_id);
+            } break;
 
             /* help & unkown options */
             case 'h':
             default:
                 cout << fmt::format("PPE Application (built {}/{})", __DATE__, __TIME__) << endl;
-                cout << "Usage: ppe [-s source<camera|image|video>] [-c CMOS sensor <ov2311_uc593c|ov2311_uc621b>] [-h]" << endl;
+                cout << "Usage: ppe [-s source<camera|image|video>] [-c CMOS sensor <ov2311_uc593c|ov2311_uc621b|ov2311_uc762c>] [-i camera id] [-h]" << endl;
                 destroy();
             break;
         }
@@ -181,7 +186,15 @@ int main(int argc, char** argv){
                 case ppe::CMOS::OV2311_UC621B: {
                     
                 } break;
-                case ppe::CMOS::OV2311_UVC: {
+                case ppe::CMOS::OV2311_UC762C: {
+                    g_source = new ppe::cmos::ov2311_uc762c(camera_id);
+                    if(g_source->open()){
+                        _ready = true;
+                    }
+                    else
+                        spdlog::error("Camera module open error");
+                } break;
+                case ppe::CMOS::OV2311_UVC:{
 
                 } break;
                 case ppe::CMOS::UNKNOWN: {
@@ -201,7 +214,6 @@ int main(int argc, char** argv){
         cv::Mat undistorMapx, undistorMapy; //undistortion map
         cv::Mat newCameraMatrix;    //optimal camera matrix
 
-
         /* create task & run */
         g_taskmanager = new ppe::taskmanager();
         g_taskmanager->add("tool", new ppe::task_tool());
@@ -213,20 +225,35 @@ int main(int argc, char** argv){
             if(g_source->is_valid()){
                 cv::Mat raw = g_source->capture();
                 cv::Mat rectified_raw;
-                cv::Mat rectified_color;
                 if(!raw.empty()){
                     if(!rectified){
                         //1. calc undistortion map
-                        cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
-                        cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
+                        //cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
+                        //cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
                         rectified = true;
                     }
                     else {
                         //1. generate undist image with linear interpolation
-                        cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
+                        // cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
+                        rectified_raw = raw;
+
+                        // cv::Point outputPoint;
+                        // outputPoint.x = undistorMapx.at<float>(raw.cols/2 , raw.rows/2);
+                        // outputPoint.y = undistorMapy.at<float>(raw.cols/2, raw.rows/2);
+                        // spdlog::info("{},{} --> {},{}", raw.cols/2, raw.rows/2, outputPoint.x, outputPoint.y);
 
                         /* image data transfer to related task */
                         g_taskmanager->request(rectified_raw);
+                        g_taskmanager->wait();
+
+                        //check fps
+                        show_fps();
+
+                        // cv::Mat raw_color;
+                        // cv::cvtColor(raw, raw_color, cv::COLOR_GRAY2RGB);
+                        // cv::line(raw_color, cv::Point((int)raw_color.cols/2, 0), cv::Point((int)raw_color.cols/2, raw_color.rows), cv::Scalar(0,255,0));
+                        // cv::line(raw_color, cv::Point(0, (int)raw_color.rows/2), cv::Point(raw_color.cols, (int)raw_color.rows/2), cv::Scalar(0,255,0));
+                        // cv::imshow("Raw", raw_color);
                     }
                 }
 
@@ -248,83 +275,6 @@ int main(int argc, char** argv){
                     } break;
                 }
             }
-            
-            /* image processing */
-            // if(g_source->is_valid()){
-            //     cv::Mat raw = g_source->capture();
-            //     cv::Mat rectified_raw;
-            //     cv::Mat rectified_color;
-            //     if(!raw.empty()){
-
-            //         if(!rectified){
-            //             //1. calc undistortion map
-            //             cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
-            //             cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
-            //             rectified = true;
-            //         }
-            //         else{
-            //             //1. generate undist image with linear interpolation
-            //             cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
-
-            //             //2. preprocessing for optimal source image to processing
-
-            //             //3. find aruco marker
-            //             cv::Mat aruco_marker;
-            //             cv::Ptr<cv::aruco::Dictionary> dict = cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50);
-            //             cv::Ptr<cv::aruco::DetectorParameters> parameters = cv::aruco::DetectorParameters::create();
-            //             vector<vector<cv::Point2f>> markerCorners, rejectedCandidates;
-            //             vector<int> markerIds;
-            //             cv::aruco::detectMarkers(rectified_raw, dict, markerCorners, markerIds, parameters, rejectedCandidates);
-
-            //             // 4. draw marker
-            //             if(markerIds.size()>0){
-
-            //                 //spdlog::info("found {} marker(s)", markerIds.size());
-            //                 //4.1 color converting (grayscale to RGB)
-            //                 cv::cvtColor(rectified_raw, rectified_color, cv::COLOR_GRAY2RGB);
-
-            //                 //4.2 draw marker
-            //                 cv::aruco::drawDetectedMarkers(rectified_color, markerCorners, markerIds);
-
-            //                 //4.3 marker pose estimation
-            //                 std::vector<cv::Vec3d> rvecs, tvecs;
-            //                 cv::aruco::estimatePoseSingleMarkers(markerCorners, 0.005, g_source->camera_matrix, g_source->distortion_coeff, rvecs, tvecs);
-            //                 spdlog::info("pos : ({}\t{}\t{})",tvecs[3][0]*1000, tvecs[3][1]*1000, tvecs[3][2]*1000); //mm
-
-            //                 //draw line
-            //                 cv::line(rectified_color, cv::Point((int)rectified_color.cols/2, 0), cv::Point((int)rectified_color.cols/2, rectified_color.rows), cv::Scalar(0,255,0));
-            //                 cv::line(rectified_color, cv::Point(0, (int)rectified_color.rows/2), cv::Point(rectified_color.cols, (int)rectified_color.rows/2), cv::Scalar(0,255,0));
-                            
-            //                 //4.4 draw axis
-            //                 // for(int i=0; i<(int)markerIds.size(); i++)
-            //                 //     cv::aruco::drawAxis(rectified_color, g_source->camera_matrix, g_source->distortion_coeff, rvecs[i], tvecs[i], 0.1);
-
-            //                 // * show fps
-            //                 show_fps();
-            //             }
-
-            //             //3. show results
-            //             if(!rectified_color.empty()) cv::imshow("Result", rectified_color);
-            //         }
-            //     }
-            //     int key = cv::waitKey(10);
-            //     switch(key){
-            //         case 'c':
-            //         case 'C':
-            //             if(!raw.empty()){
-            //                 time_t timer = time(nullptr);
-            //                 struct tm* t = localtime(&timer);
-            //                 string filename = fmt::format("capture_{}-{}-{}T{}-{}-{}.jpg", t->tm_year+1900, t->tm_mon+1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
-            //                 cv::imwrite(filename, raw);
-            //                 spdlog::info("saved : {}", filename);
-            //             }
-            //         break;
-
-            //         case 27: { //Escape
-            //             destroy();
-            //         } break;
-            //     }
-            // }
         }
     }
     else {
