@@ -187,11 +187,15 @@ namespace ppe {
              * 
              * @param data image data
              */
-            virtual void request(cv::Mat data){
+            virtual void request_all(cv::Mat data){
                 for(auto itr=_task_container.begin();itr!=_task_container.end(); ++itr){
                     if(itr->second->get_status()==task::STATUS::RUNNING)
                         itr->second->request(data);
                 }
+            }
+
+            virtual void request(ppe::task* t, cv::Mat data){
+                
             }
 
             void wait(){

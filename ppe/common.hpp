@@ -37,5 +37,11 @@ namespace ppe {
         OV2311_UC762C
     };
 
+    /* experimental */
+    enum class EXP : int {
+        UNKNOWN,
+        MCL_PF /* Monte Carlo Localiation - Particle Filter */
+    };
+
 }
 

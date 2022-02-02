@@ -125,8 +125,9 @@ int main(int argc, char** argv){
     int camera_id = 0;
     ppe::SOURCE _source = ppe::SOURCE::CAMERA;
     ppe::CMOS _cmos = ppe::CMOS::OV2311_UC593C; //OV2311+USB3.0
+    ppe::EXP _exp = ppe::EXP::UNKNOWN;
     
-    while((optc=getopt(argc, argv, "s:c:i:h"))!=-1)
+    while((optc=getopt(argc, argv, "s:c:i:e:h"))!=-1)
     {
         switch(optc){
             /* source selection */
@@ -156,6 +157,15 @@ int main(int argc, char** argv){
                 camera_id = atoi(optarg);
                 spdlog::info("Camera ID : {}", camera_id);
             } break;
+            case 'e':{
+                string exp = optarg;
+                if(!exp.compare("mcl_pf")) _exp = ppe::EXP::MCL_PF;
+                else {
+                    _exp = ppe::EXP::UNKNOWN;
+                    spdlog::warn("Unknown Experimental option");
+                }
+
+            } break;
 
             /* help & unkown options */
             case 'h':
@@ -178,10 +188,12 @@ int main(int argc, char** argv){
             /* select cmos sensor */
             switch(_cmos){
                 case ppe::CMOS::OV2311_UC593C: {
+                    #if defined(_MODULE_OV2311_UC593C_HPP_)
                     g_source = new ppe::cmos::ov2311_uc593c("./OV2311_MIPI_2Lane_RAW10_10b_1600x1300.cfg", 30);
                     if(g_source->open()) {
                         _ready = true;
                     }
+                    #endif
                 } break;
                 case ppe::CMOS::OV2311_UC621B: {
                     
@@ -228,14 +240,13 @@ int main(int argc, char** argv){
                 if(!raw.empty()){
                     if(!rectified){
                         //1. calc undistortion map
-                        //cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
-                        //cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
+                        cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
+                        cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
                         rectified = true;
                     }
                     else {
                         //1. generate undist image with linear interpolation
-                        // cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
-                        rectified_raw = raw;
+                        cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
 
                         // cv::Point outputPoint;
                         // outputPoint.x = undistorMapx.at<float>(raw.cols/2 , raw.rows/2);
@@ -243,7 +254,7 @@ int main(int argc, char** argv){
                         // spdlog::info("{},{} --> {},{}", raw.cols/2, raw.rows/2, outputPoint.x, outputPoint.y);
 
                         /* image data transfer to related task */
-                        g_taskmanager->request(rectified_raw);
+                        g_taskmanager->request_all(rectified_raw);
                         g_taskmanager->wait();
 
                         //check fps

@@ -22,7 +22,8 @@ LD_LIBRARY_PATH += -L./lib/x86/Arducam_SDK/
 # OS
 ifeq ($(OS),Linux) #for Linux
 	LDFLAGS = -Wl,--export-dynamic
-	LDLIBS =  -lArduCamLib -lpthread -larducam_config_parser `pkg-config --cflags --libs opencv4` -lusb-1.0
+#LDLIBS =  -lArduCamLib -lpthread -larducam_config_parser `pkg-config --cflags --libs opencv4` -lusb-1.0
+	LDLIBS =  -lpthread `pkg-config --cflags --libs opencv4` -lusb-1.0
 	GTEST_LDLIBS = -lgtest
 else
 
