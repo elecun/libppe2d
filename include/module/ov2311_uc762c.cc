@@ -52,6 +52,7 @@ namespace ppe::cmos {
             if(_camera->grab()){
                 cv::Mat raw;
                 _camera->retrieve(raw);
+                cv::cvtColor(raw, raw, cv::COLOR_BGR2GRAY);
                 return raw;
             }
         }

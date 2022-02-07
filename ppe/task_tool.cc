@@ -22,15 +22,6 @@ namespace ppe {
 
     void task_tool::request(cv::Mat data){
         _task = async(launch::async, &task_tool::process, this, data);
-
-        // if(!_working){
-        //     _working = true;
-        //     auto task = async(launch::async, &task_tool::process, this, data);
-        //     task.get();
-        //     _working = false;
-        // }
-        // else
-        //     spdlog::info("task tool working... passed");
     }
 
     void task_tool::wait(){

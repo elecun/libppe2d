@@ -2,6 +2,7 @@
 #include "task_wafer.hpp"
 #include <include/spdlog/spdlog.h>
 #include <opencv2/aruco.hpp>
+#include <opencv2/imgproc/imgproc_c.h>
 
 namespace ppe {
 
@@ -27,15 +28,30 @@ namespace ppe {
         vector<int> markerIds;
         cv::aruco::detectMarkers(input, dict, markerCorners, markerIds, parameters, rejectedCandidates);
 
-        //2. convert to color
-        cv::Mat input_color;
-        cv::cvtColor(input, input_color, cv::COLOR_GRAY2RGB);
+        //3. pose estimajton
+        if(markerIds.size() > 0) {
+            std::vector<cv::Vec3d> rvecs, tvecs;
+            cv::aruco::estimatePoseSingleMarkers(markerCorners, 0.04, _drv->camera_matrix, _drv->distortion_coeff, rvecs, tvecs);
 
-        //3. draw
-        cv::line(input_color, cv::Point((int)input_color.cols/2, 0), cv::Point((int)input_color.cols/2, input_color.rows), cv::Scalar(0,255,0));
-        cv::line(input_color, cv::Point(0, (int)input_color.rows/2), cv::Point(input_color.cols, (int)input_color.rows/2), cv::Scalar(0,255,0));
+            //2. draw markers
+            cv::cvtColor(input, input, cv::COLOR_GRAY2RGB);
+            //cv::aruco::drawDetectedMarkers(input, markerCorners, markerIds);
+            for(int i=0; i<markerIds.size(); i++){
+                if(markerIds[i]==1){
+                    cv::aruco::drawAxis(input, _drv->camera_matrix, _drv->distortion_coeff, rvecs[i], tvecs[i], 0.1);
+                    spdlog::info("tvec : {}\t{}", tvecs[0][0], tvecs[0][1]);
+                }
+                    
+            }
 
-        cv::imshow("wafer", input_color);
+            cv::line(input, cv::Point((int)input.cols/2, 0), cv::Point((int)input.cols/2, input.rows), cv::Scalar(0,255,0));
+            cv::line(input, cv::Point(0, (int)input.rows/2), cv::Point(input.cols, (int)input.rows/2), cv::Scalar(0,255,0));
+        }
+
+        
+        cv::resize(input, input, cv::Size( input.cols/2, input.rows/2 ), 0, 0, CV_INTER_NN);
+        cv::imshow("marker", input);
+
     }
 
     void task_wafer::request(cv::Mat data){

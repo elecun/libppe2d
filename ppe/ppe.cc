@@ -28,7 +28,7 @@
 #include <include/core/iController.hpp>
 
 /* to use camera device for ov2311 with USB3.0 or MIPI interface */
-#include <module/ov2311_uc593c.hpp>
+//#include <module/ov2311_uc593c.hpp>
 #include <module/ov2311_uc762c.hpp>
 
 /* for multi tasking */
@@ -228,8 +228,8 @@ int main(int argc, char** argv){
 
         /* create task & run */
         g_taskmanager = new ppe::taskmanager();
-        g_taskmanager->add("tool", new ppe::task_tool());
-        g_taskmanager->add("wafer", new ppe::task_wafer());
+        //g_taskmanager->add("tool", new ppe::task_tool());
+        g_taskmanager->add("wafer", new ppe::task_wafer(g_source));
         g_taskmanager->start();
 
         while(1){
@@ -240,13 +240,13 @@ int main(int argc, char** argv){
                 if(!raw.empty()){
                     if(!rectified){
                         //1. calc undistortion map
-                        cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
-                        cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
+                        //cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
+                        //cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
                         rectified = true;
                     }
                     else {
                         //1. generate undist image with linear interpolation
-                        cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
+                        //cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
 
                         // cv::Point outputPoint;
                         // outputPoint.x = undistorMapx.at<float>(raw.cols/2 , raw.rows/2);
@@ -254,17 +254,12 @@ int main(int argc, char** argv){
                         // spdlog::info("{},{} --> {},{}", raw.cols/2, raw.rows/2, outputPoint.x, outputPoint.y);
 
                         /* image data transfer to related task */
-                        g_taskmanager->request_all(rectified_raw);
+                        g_taskmanager->request_all(raw);
                         g_taskmanager->wait();
 
                         //check fps
                         show_fps();
 
-                        // cv::Mat raw_color;
-                        // cv::cvtColor(raw, raw_color, cv::COLOR_GRAY2RGB);
-                        // cv::line(raw_color, cv::Point((int)raw_color.cols/2, 0), cv::Point((int)raw_color.cols/2, raw_color.rows), cv::Scalar(0,255,0));
-                        // cv::line(raw_color, cv::Point(0, (int)raw_color.rows/2), cv::Point(raw_color.cols, (int)raw_color.rows/2), cv::Scalar(0,255,0));
-                        // cv::imshow("Raw", raw_color);
                     }
                 }
 

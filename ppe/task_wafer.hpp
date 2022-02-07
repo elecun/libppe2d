@@ -16,6 +16,7 @@
 #include <include/core/task.hpp>
 #include <opencv2/opencv.hpp>
 #include <future>
+#include <include/core/driver.hpp>
 
 using namespace std;
 
@@ -23,7 +24,7 @@ namespace ppe {
 
     class task_wafer : public ppe::task {
         public:
-            task_wafer() = default;
+            task_wafer(ppe::source::driver* drv):_drv(drv){ };
             virtual ~task_wafer() = default;
 
             virtual bool start();
@@ -34,6 +35,7 @@ namespace ppe {
 
         private:
             future<void> _task;
+            ppe::source::driver* _drv = nullptr;
             
 
     }; 
