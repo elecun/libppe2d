@@ -28,20 +28,20 @@ namespace ppe::cmos {
 
     class ov2311_uc762c : public ppe::source::driver {
         /* Camera Intrinsic parameters */
-        #define _FX_    906.666
-        #define _FY_    906.611
-        #define _FX_ERROR_ 0.296
-        #define _FY_ERROR_ 0.290
+        #define _FX_    2517.792
+        #define _FY_    2514.767
+        #define _FX_ERROR_ 21.207
+        #define _FY_ERROR_ 21.231
         #define _FOCAL_LEGNTH_      _FX_, _FY_
-        #define _CX_ 769.103
-        #define _CY_ 689.538
-        #define _CX_ERROR_ 0.170
-        #define _CY_ERROR_ 0.096
+        #define _CX_ 814.045
+        #define _CY_ 567.330
+        #define _CX_ERROR_ 3.114
+        #define _CY_ERROR_ 0.755
         #define _PRINCIPAL_POINT_   _CX_, _CY_
-        #define _K1_    0.034472    //Radial distortion
-        #define _K2_    -0.046075
-        #define _P1_    0.000539    //tangential distortion
-        #define _P2_    0.000405
+        #define _K1_    -0.361044    //Radial distortion
+        #define _K2_    0.154482
+        #define _P1_    0.000808    //tangential distortion
+        #define _P2_    0.000033
 
         public:
             ov2311_uc762c(int camera_id);
@@ -58,8 +58,6 @@ namespace ppe::cmos {
         private:
             cv::VideoCapture* _camera = nullptr;
             int _camera_id = 0;
-            int _resolution_width = 1600;
-            int _resolution_height = 1200;
 
     };
 

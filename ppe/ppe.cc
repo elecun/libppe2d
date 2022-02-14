@@ -241,12 +241,12 @@ int main(int argc, char** argv){
                     if(!rectified){
                         //1. calc undistortion map
                         //cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
-                        //cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
+                        cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), g_source->camera_matrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
                         rectified = true;
                     }
                     else {
                         //1. generate undist image with linear interpolation
-                        //cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
+                        cv::remap(raw, rectified_raw, undistorMapx, undistorMapy, cv::INTER_LINEAR);
 
                         // cv::Point outputPoint;
                         // outputPoint.x = undistorMapx.at<float>(raw.cols/2 , raw.rows/2);
@@ -254,7 +254,7 @@ int main(int argc, char** argv){
                         // spdlog::info("{},{} --> {},{}", raw.cols/2, raw.rows/2, outputPoint.x, outputPoint.y);
 
                         /* image data transfer to related task */
-                        g_taskmanager->request_all(raw);
+                        g_taskmanager->request_all(rectified_raw);
                         g_taskmanager->wait();
 
                         //check fps

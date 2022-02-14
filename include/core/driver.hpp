@@ -65,8 +65,8 @@ namespace ppe::source {
             virtual cv::Mat capture() = 0;
 
         public:
-            cv::Mat camera_matrix;
-            cv::Mat distortion_coeff;
+            cv::Mat camera_matrix = cv::Mat::eye(3, 3,CV_64FC1);
+            cv::Mat distortion_coeff = cv::Mat::eye(1, 5,CV_64FC1);
             int width = 0;
             int height = 0;
 
