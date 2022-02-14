@@ -240,8 +240,8 @@ int main(int argc, char** argv){
                 if(!raw.empty()){
                     if(!rectified){
                         //1. calc undistortion map
-                        //cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
-                        cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), g_source->camera_matrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
+                        cv::Mat newCameraMatrix = cv::getOptimalNewCameraMatrix(g_source->camera_matrix, g_source->distortion_coeff, cv::Size(g_source->width, g_source->height), 1);
+                        cv::initUndistortRectifyMap(g_source->camera_matrix, g_source->distortion_coeff, cv::Mat(), newCameraMatrix, cv::Size(g_source->width, g_source->height), CV_32FC1, undistorMapx, undistorMapy);
                         rectified = true;
                     }
                     else {
