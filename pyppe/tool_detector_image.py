@@ -17,28 +17,31 @@ if __name__ == "__main__":
     raw_gray = cv2.cvtColor(raw, COLOR_RGB2GRAY)
     tool_gray = cv2.cvtColor(tool, COLOR_RGB2GRAY)
 
-    # Show Histogram
-    hist = cv2.calcHist([raw_gray],[0],None,[256],[0,256])
-    plt.plot(hist)
-    plt.show()
-
     # Camera Calibration (for Arducam US762C Camera Model)
     h,w = raw_gray.shape[:2]
     mtx = np.matrix([[2517.792, 0., 814.045],[0., 2514.767, 567.330],[0., 0., 1.]])
     dist = np.matrix([[-0.361044, 0.154482, 0.000808, 0.000033, 0.]])
     newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),0,(w,h))
     raw_gray = cv2.undistort(raw_gray, mtx, dist, None, newcameramtx)
+    raw_color = cv2.cvtColor(raw_gray, COLOR_GRAY2BGR)
+
+
+    # Get Edge Image & Image Overlap
+    canny = cv2.Canny(raw_gray, 50, 250) # min 50, max 250
+    tool_edge = cv2.cvtColor(canny, COLOR_GRAY2BGR)
+    h,w = raw_gray.shape[:2]
+    edge = np.zeros((h,w,3), np.uint8)
+    edge[np.where((tool_edge==[255,255,255]).all(axis=2))] = [0,0,255]
+    dst = cv2.addWeighted(raw_color,1.0,edge,0.5,0)
 
 
     # create blank image
-    blank = np.zeros((h,w,3), np.uint8)
+    #blank = np.zeros((h,w,3), np.uint8)
 
-    # equalization
-    #clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-    #raw_gray = clahe.apply(raw_gray)
 
     #binarization
     raw_bin = cv2.adaptiveThreshold(raw_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 5)
+    contrast2 = raw_bin.std()
 
     tool_bin = cv2.adaptiveThreshold(tool_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 5)
     tool_bin = cv2.bitwise_not(tool_bin)
