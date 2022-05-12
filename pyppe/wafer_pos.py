@@ -7,27 +7,26 @@ import cv2
 from cv2 import COLOR_GRAY2BGR
 import numpy as np
 from cv2 import COLOR_RGB2GRAY
-from utils import ARUCO_DICT, aruco_display
 
-ARUCO_DICT = {
-	"DICT_4X4_50": cv2.aruco.DICT_4X4_50,
-	"DICT_4X4_100": cv2.aruco.DICT_4X4_100,
-	"DICT_4X4_250": cv2.aruco.DICT_4X4_250,
-	"DICT_4X4_1000": cv2.aruco.DICT_4X4_1000,
-	"DICT_5X5_50": cv2.aruco.DICT_5X5_50,
-	"DICT_5X5_100": cv2.aruco.DICT_5X5_100,
-	"DICT_5X5_250": cv2.aruco.DICT_5X5_250,
-	"DICT_5X5_1000": cv2.aruco.DICT_5X5_1000,
-	"DICT_6X6_50": cv2.aruco.DICT_6X6_50,
-	"DICT_6X6_100": cv2.aruco.DICT_6X6_100,
-	"DICT_6X6_250": cv2.aruco.DICT_6X6_250,
-	"DICT_6X6_1000": cv2.aruco.DICT_6X6_1000,
-	"DICT_7X7_50": cv2.aruco.DICT_7X7_50,
-	"DICT_7X7_100": cv2.aruco.DICT_7X7_100,
-	"DICT_7X7_250": cv2.aruco.DICT_7X7_250,
-	"DICT_7X7_1000": cv2.aruco.DICT_7X7_1000,
-	"DICT_ARUCO_ORIGINAL": cv2.aruco.DICT_ARUCO_ORIGINAL,
-}
+# ARUCO_DICT = {
+# 	"DICT_4X4_50": cv2.aruco.DICT_4X4_50,
+# 	"DICT_4X4_100": cv2.aruco.DICT_4X4_100,
+# 	"DICT_4X4_250": cv2.aruco.DICT_4X4_250,
+# 	"DICT_4X4_1000": cv2.aruco.DICT_4X4_1000,
+# 	"DICT_5X5_50": cv2.aruco.DICT_5X5_50,
+# 	"DICT_5X5_100": cv2.aruco.DICT_5X5_100,
+# 	"DICT_5X5_250": cv2.aruco.DICT_5X5_250,
+# 	"DICT_5X5_1000": cv2.aruco.DICT_5X5_1000,
+# 	"DICT_6X6_50": cv2.aruco.DICT_6X6_50,
+# 	"DICT_6X6_100": cv2.aruco.DICT_6X6_100,
+# 	"DICT_6X6_250": cv2.aruco.DICT_6X6_250,
+# 	"DICT_6X6_1000": cv2.aruco.DICT_6X6_1000,
+# 	"DICT_7X7_50": cv2.aruco.DICT_7X7_50,
+# 	"DICT_7X7_100": cv2.aruco.DICT_7X7_100,
+# 	"DICT_7X7_250": cv2.aruco.DICT_7X7_250,
+# 	"DICT_7X7_1000": cv2.aruco.DICT_7X7_1000,
+# 	"DICT_ARUCO_ORIGINAL": cv2.aruco.DICT_ARUCO_ORIGINAL,
+# }
 
 if __name__ == "__main__":
 
@@ -49,7 +48,7 @@ if __name__ == "__main__":
     newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),0,(w,h))
 
     # maker parameters
-    markerdict = cv2.aruco.Dictionary_get(ARUCO_DICT[2])
+    markerdict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_250)
     markerparams = cv2.aruco.DetectorParameters_create()
 
     while True:
@@ -58,12 +57,26 @@ if __name__ == "__main__":
 
         # undistortion by camera matrix
         raw_gray = cv2.undistort(raw_gray, mtx, dist, None, newcameramtx)
-        raw_color = cv2.cvtColor(raw_gray, COLOR_GRAY2BGR)
 
         # find markers
         corners, ids, rejected = cv2.aruco.detectMarkers(raw, markerdict, parameters=markerparams)
-        detected_markers = aruco_display(corners, ids, rejected, frame)
-        cv2.imshow("Image", detected_markers)
+        if len(corners)>0:
+            ids = ids.flattern()
+
+            for (markerCorner, markerID) in zip(corners, ids):		
+                corners = markerCorner.reshape((4, 2))
+                (topLeft, topRight, bottomRight, bottomLeft) = corners
+                # convert each of the (x, y)-coordinate pairs to integers
+                topRight = (int(topRight[0]), int(topRight[1]))
+                bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
+                bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
+                topLeft = (int(topLeft[0]), int(topLeft[1]))
+
+                cv2.line(raw, topLeft, topRight, (0, 255, 0), 2)
+                cv2.line(raw, topRight, bottomRight, (0, 255, 0), 2)
+                cv2.line(raw, bottomRight, bottomLeft, (0, 255, 0), 2)
+                cv2.line(raw, bottomLeft, topLeft, (0, 255, 0), 2)
+        
 
         # pose estimation
 
