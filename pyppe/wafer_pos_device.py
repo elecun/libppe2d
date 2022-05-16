@@ -28,16 +28,18 @@ from cv2 import COLOR_RGB2GRAY
 # 	"DICT_ARUCO_ORIGINAL": cv2.aruco.DICT_ARUCO_ORIGINAL,
 # }
 
+        
+
+
 if __name__ == "__main__":
 
-    camera = cv2.VideoCapture(0)
-    camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1600)
-    camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 1200)
-    camera.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
-    camera.set(cv2.CAP_PROP_AUTO_WB, 0)
-
-    #
-    success, raw = camera.read()
+    # use camera device
+    device = cv2.VideoCapture(0)
+    device.set(cv2.CAP_PROP_FRAME_WIDTH, 1600)
+    device.set(cv2.CAP_PROP_FRAME_HEIGHT, 1200)
+    device.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0)
+    device.set(cv2.CAP_PROP_AUTO_WB, 0)
+    success, raw = device.read()
     if success is False:
         print("Cannot read data from camera device")
         exit()
@@ -52,7 +54,8 @@ if __name__ == "__main__":
     markerparams = cv2.aruco.DetectorParameters_create()
 
     while True:
-        success, raw = camera.read()
+        # use for camera device
+        # success, raw = device.read()
         raw_gray = cv2.cvtColor(raw, cv2.COLOR_BGR2GRAY) # convert to grayscale
 
         # undistortion by camera matrix
@@ -61,7 +64,7 @@ if __name__ == "__main__":
         # find markers
         corners, ids, rejected = cv2.aruco.detectMarkers(raw, markerdict, parameters=markerparams)
         if len(corners)>0:
-            ids = ids.flattern()
+            ids = ids.flatten()
 
             for (markerCorner, markerID) in zip(corners, ids):		
                 corners = markerCorner.reshape((4, 2))
@@ -84,5 +87,5 @@ if __name__ == "__main__":
         key = cv2.waitKey(0)
         if key == 27:
             cv2.destroyAllWindows()
-            camera.release()
+            device.release()
             break
