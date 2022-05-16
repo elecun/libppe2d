@@ -12,7 +12,7 @@ from cv2 import COLOR_RGB2GRAY
 if __name__ == "__main__":
 
     # use image file
-    raw = cv2.imread("./data/x-1.0.jpg")
+    raw = cv2.imread("./pyppe/data/x-1.0.jpg")
     cv2
     
     if raw.size == 0:
@@ -24,7 +24,7 @@ if __name__ == "__main__":
     newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),0,(w,h))
 
     # maker parameters
-    markerdict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_250)
+    markerdict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
     markerparams = cv2.aruco.DetectorParameters_create()
 
     raw_gray = cv2.cvtColor(raw, cv2.COLOR_BGR2GRAY) # convert to grayscale
