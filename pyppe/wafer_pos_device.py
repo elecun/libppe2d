@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
         # preprocessing binarization
         #raw_gray = cv2.adaptiveThreshold(raw_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 5, 5)
-        #_, raw_gray = cv2.threshold(raw_gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        _, raw_gray = cv2.threshold(raw_gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
         # undistortion by camera matrix
         raw_gray = cv2.undistort(raw_gray, mtx, dist, None, newcameramtx)
