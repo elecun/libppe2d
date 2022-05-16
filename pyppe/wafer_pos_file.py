@@ -12,7 +12,7 @@ from cv2 import COLOR_RGB2GRAY
 if __name__ == "__main__":
 
     # use image file
-    raw = cv2.imread("./pyppe/data/x-1.0.jpg")
+    raw = cv2.imread("./data/x-1.0.jpg")
     cv2
     
     if raw.size == 0:

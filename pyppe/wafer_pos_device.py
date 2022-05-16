@@ -55,36 +55,50 @@ if __name__ == "__main__":
 
     while True:
         # use for camera device
-        # success, raw = device.read()
+        success, raw = device.read()
+        #raw = cv2.GaussianBlur(raw,(5,5),0)
+
+        if success is False:
+            print("Capture Error")
+            break
         raw_gray = cv2.cvtColor(raw, cv2.COLOR_BGR2GRAY) # convert to grayscale
+
+        # preprocessing binarization
+        #raw_gray = cv2.adaptiveThreshold(raw_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 5, 5)
+        #_, raw_gray = cv2.threshold(raw_gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
         # undistortion by camera matrix
         raw_gray = cv2.undistort(raw_gray, mtx, dist, None, newcameramtx)
+        raw_color = cv2.cvtColor(raw_gray, cv2.COLOR_GRAY2BGR) # convert to grayscale
 
         # find markers
-        corners, ids, rejected = cv2.aruco.detectMarkers(raw, markerdict, parameters=markerparams)
-        if len(corners)>0:
-            ids = ids.flatten()
+        corners, ids, rejected = cv2.aruco.detectMarkers(raw_gray, markerdict, parameters=markerparams)
+        if len(corners) > 0:
+            for i in range(0, len(ids)):
+                rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.02, mtx, dist)
+                
+                if ids[i] == 19:
+                    print("{}\tX : {}\tY : {}\tZ : {}".format(ids[i], tvec.reshape(-1)[0]*100, tvec.reshape(-1)[1]*100, tvec.reshape(-1)[2]*100))
 
-            for (markerCorner, markerID) in zip(corners, ids):		
-                corners = markerCorner.reshape((4, 2))
-                (topLeft, topRight, bottomRight, bottomLeft) = corners
-                # convert each of the (x, y)-coordinate pairs to integers
+                (topLeft, topRight, bottomRight, bottomLeft) = corners[i].reshape((4,2))
                 topRight = (int(topRight[0]), int(topRight[1]))
                 bottomRight = (int(bottomRight[0]), int(bottomRight[1]))
                 bottomLeft = (int(bottomLeft[0]), int(bottomLeft[1]))
                 topLeft = (int(topLeft[0]), int(topLeft[1]))
 
-                cv2.line(raw, topLeft, topRight, (0, 255, 0), 2)
-                cv2.line(raw, topRight, bottomRight, (0, 255, 0), 2)
-                cv2.line(raw, bottomRight, bottomLeft, (0, 255, 0), 2)
-                cv2.line(raw, bottomLeft, topLeft, (0, 255, 0), 2)
+                cX = int((topLeft[0] + bottomRight[0]) / 2.0)
+                cY = int((topLeft[1] + bottomRight[1]) / 2.0)
+                cv2.circle(raw_color, (cX, cY), 4, (0, 0, 255), -1)
+
+                cv2.aruco.drawDetectedMarkers(raw_color, corners) 
+                cv2.aruco.drawAxis(raw_color, mtx, dist, rvec, tvec, 0.01) 
+                cv2.putText(raw_color, str(ids[i]),(topLeft[0], topLeft[1] - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
         
 
-        # pose estimation
+        cv2.imshow("Detected Marker",raw_color)
 
 
-        key = cv2.waitKey(0)
+        key = cv2.waitKey(1)
         if key == 27:
             cv2.destroyAllWindows()
             device.release()
