@@ -8,7 +8,7 @@ from cv2 import COLOR_GRAY2BGR
 import numpy as np
 from cv2 import COLOR_RGB2GRAY
 
-WAFER_MAP = {
+WAFER_MARKER_MAP = {
 1:(-40.0,140.0),    2:(-20.0,140.0),    3:(0.0,140.0),      4:(20.0,140.0),     5:(40.0,140.0),  
 6:(-80.0,120.0),    7:(-60.0,120.0),    8:(-40.0,120.0),    9:(-20.0,120.0),    10:(0.0,120.0),     11:(20.0,120.0),    12:(40.0,120.0),    13:(60.0,120.0),    14:(80.0,120.0),   
 15:(-100.0,100.0),  16:(-80.0,100.0),   17:(-60.0,100.0),   18:(-40.0,100.0),   19:(-20.0,100.0),   20:(0.0,100.0),     21:(20.0,100.0),    22:(40.0,100.0),    23:(60.0,100.0),    24:(80.0,100.0),    25:(100.0,100.0),   
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),0,(w,h))
 
     # maker parameters
-    markerdict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_6X6_250)
+    markerdict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_250)
     markerparams = cv2.aruco.DetectorParameters_create()
 
     while True:
@@ -66,13 +66,17 @@ if __name__ == "__main__":
         raw_gray = cv2.undistort(raw_gray, mtx, dist, None, newcameramtx)
         raw_color = cv2.cvtColor(raw_gray, cv2.COLOR_GRAY2BGR) # convert to grayscale
 
+        # show origin point
+        cv2.line(raw_color, (814-100,567), (814+100,567), (0,0,255), 1, cv2.LINE_AA)
+        cv2.line(raw_color, (814,567-100), (814,567+100), (0,0,255), 1, cv2.LINE_AA)
+
         # find markers
         corners, ids, rejected = cv2.aruco.detectMarkers(raw_gray, markerdict, parameters=markerparams)
         if len(corners) > 0:
             for i in range(0, len(ids)):
-                rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.02, mtx, dist)
+                rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.04, mtx, dist)
                 
-                if ids[i] == 19:
+                if ids[i] == 20:
                     print("{}\tX : {}\tY : {}\tZ : {}".format(ids[i], tvec.reshape(-1)[0]*100, tvec.reshape(-1)[1]*100, tvec.reshape(-1)[2]*100))
 
                 (topLeft, topRight, bottomRight, bottomLeft) = corners[i].reshape((4,2))
@@ -87,7 +91,7 @@ if __name__ == "__main__":
 
                 cv2.aruco.drawDetectedMarkers(raw_color, corners) 
                 cv2.aruco.drawAxis(raw_color, mtx, dist, rvec, tvec, 0.01) 
-                cv2.putText(raw_color, str(ids[i]),(topLeft[0], topLeft[1] - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                cv2.putText(raw_color, str(ids[i]),(topLeft[0], topLeft[1] - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
         
 
         cv2.imshow("Detected Marker",raw_color)
