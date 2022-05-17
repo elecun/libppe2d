@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
         # preprocessing binarization
         #raw_gray = cv2.adaptiveThreshold(raw_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 5, 5)
-        _, raw_gray = cv2.threshold(raw_gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+        #_, raw_gray = cv2.threshold(raw_gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
         # undistortion by camera matrix
         raw_gray = cv2.undistort(raw_gray, mtx, dist, None, newcameramtx)
@@ -76,7 +76,7 @@ if __name__ == "__main__":
             for i in range(0, len(ids)):
                 rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.04, mtx, dist)
                 
-                if ids[i] == 20:
+                if ids[i] == 32:
                     print("{}\tX : {}\tY : {}\tZ : {}".format(ids[i], tvec.reshape(-1)[0]*100, tvec.reshape(-1)[1]*100, tvec.reshape(-1)[2]*100))
 
                 (topLeft, topRight, bottomRight, bottomLeft) = corners[i].reshape((4,2))
