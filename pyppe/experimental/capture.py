@@ -27,16 +27,20 @@ if __name__ == "__main__":
         dist = np.matrix([[-0.361044, 0.154482, 0.000808, 0.000033, 0.]])
         newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx,dist,(w,h),0,(w,h))
 
-        raw_gray = cv2.cvtColor(raw, cv2.COLOR_BGR2GRAY) # convert to grayscale
-        raw_gray = cv2.bilateralFilter(raw_gray, -1, 100, 55) # apply bilateral filter
-        _, raw_gray = cv2.threshold(raw_gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)    # binarization
-
-        cv2.imwrite("capture.png", raw_gray)
-
     while True:
+
+        success, raw = device.read()
+        raw_gray = cv2.cvtColor(raw, cv2.COLOR_BGR2GRAY) # convert to grayscale
+        #raw_gray = cv2.bilateralFilter(raw_gray, -1, 100, 55) # apply bilateral filter
+        #_, raw_gray = cv2.threshold(raw_gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)    # binarization
+
+        raw_gray = cv2.undistort(raw_gray, mtx, dist, None, newcameramtx)
+        
         cv2.imshow("Capture",raw_gray)
         key = cv2.waitKey(1)
         if key == 27:
             cv2.destroyAllWindows()
             device.release()
             break
+        else:
+            cv2.imwrite("{}.png".format(key), raw_gray)
