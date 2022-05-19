@@ -40,6 +40,9 @@ if __name__ == "__main__":
     raw1_edge = cv2.Canny(raw1_binary, 10, 5)
     raw2_edge = cv2.Canny(raw2_binary, 10, 5)
 
+    cv2.imwrite("raw1_edge.png", raw1_edge)
+    cv2.imwrite("raw2_edge.png", raw2_edge)
+
     raw2_edge_color = cv2.cvtColor(raw2_edge, COLOR_GRAY2BGR)
 
     raw2_lines = cv2.HoughLines(raw2_edge, 2, np.pi/180, 190)
