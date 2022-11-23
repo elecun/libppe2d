@@ -60,8 +60,11 @@ $(BUILDDIR)libppe2d.o: $(CURRENT_DIR)/libppe2d.cc
 $(BUILDDIR)algorithm.o: $(CURRENT_DIR)/algorithm.cc
 					   $(CC) $(CXXFLAGS) $(INCLUDE_DIR) -c $^ -o $@
 
+test_ppe2d : $(BUILDDIR)test_ppe2d.o
+			  $(CC) $(LDFLAGS) $(LD_LIBRARY_PATH) -o $(BUILDDIR)$@ $^ $(LDLIBS) -lppe2d
 
-all : test_camera
+
+all : test_camera test_ppe2d libppe2d
 clean : FORCE 
 		$(RM) $(BUILDDIR)*.o
 FORCE : 
