@@ -25,7 +25,6 @@ namespace libppe2d {
             camera() = default;
             virtual ~camera() = default;
 
-        protected:
             virtual bool open() = 0;
             virtual void close() = 0;
             virtual bool is_valid() = 0;
@@ -68,7 +67,7 @@ namespace libppe2d {
             bool is_valid() override;
             cv::Mat capture() override;
 
-        protected:
+        public:
             cv::VideoCapture* _camera = nullptr;
             cv::VideoWriter* _video = nullptr;
             int _camera_id = 0;

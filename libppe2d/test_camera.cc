@@ -71,9 +71,13 @@ int main(int argc, char** argv){
     signal_set();
 
     libppe2d::camera* _camera = new libppe2d::ov2311_uc762c(0); //id 0
-    libppe2d::algorithm* _ppe = new libppe2d
+    if(_camera->open()){
+        
+    }
 
 
+    console::error("Camera device cannot be opened.");
     delete _camera;
 
+    return EXIT_SUCCESS;
 }
