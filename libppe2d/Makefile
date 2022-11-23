@@ -51,6 +51,16 @@ $(BUILDDIR)test_camera.o: $(CURRENT_DIR)/test_camera.cc
 	$(CC) $(CXXFLAGS) $(INCLUDE_DIR) -c $^ -o $@
 
 
+libppe2d.so : $(BUILDDIR)libppe2d.o \
+			  $(BUILDDIR)algorithm.o
+			  $(CC) $(LDFLAGS) $(LD_LIBRARY_PATH) -shared -o $(BUILDDIR)$@ $^ $(LDLIBS)
+
+$(BUILDDIR)libppe2d.o: $(CURRENT_DIR)/libppe2d.cc
+					   $(CC) $(CXXFLAGS) $(INCLUDE_DIR) -c $^ -o $@
+$(BUILDDIR)algorithm.o: $(CURRENT_DIR)/algorithm.cc
+					   $(CC) $(CXXFLAGS) $(INCLUDE_DIR) -c $^ -o $@
+
+
 all : test_camera
 clean : FORCE 
 		$(RM) $(BUILDDIR)*.o

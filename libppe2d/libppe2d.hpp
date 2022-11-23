@@ -70,7 +70,7 @@ namespace libppe2d {
      * 
      * @param model_name 
      */
-    void set_camera_model(const char* model_name = "ov2311_uc762c");
+    //void set_camera_model(const char* model_name = "ov2311_uc762c");
 
     /**
      * @brief start capture from 2 cameras
@@ -93,29 +93,6 @@ namespace libppe2d {
     std::vector<pair<double, pos2d>> compute_markers_ppe(const char* video_filename);
     std::vector<pair<double, pos2d>> compute_fork_ppe(const char* video_filename);
 
-
-    /**
-     * @brief device & algorithm control class
-     * 
-     */
-    class control {
-        public:
-            control();
-            virtual ~control();
-    };
-    
-    /**
-     * @brief algorithm class
-     * 
-     */
-    class algorithm {
-        public:
-            algorithm();
-            virtual ~algorithm();
-
-        public:
-
-    };
 } /* namespace */
 
 # endif
