@@ -7,9 +7,7 @@
                 "${workspaceFolder}/include",
                 "/usr/include/x86_64-linux-gnu/c++/9",
                 "/usr/include/opencv4",
-                "/opt/homebrew/Cellar/opencv/4.5.5/include/opencv4",
                 "/usr/include/x86_64-linux-gnu",
-                "/opt/homebrew/Cellar/opencv/4.5.5/include/opencv4"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
