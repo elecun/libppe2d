@@ -47,7 +47,7 @@ namespace libppe2d {
 
     #ifndef _camera_param
     typedef struct _camera_param {
-        double fx, fx;
+        double fx, fy;
         double cx, cy;
         double dist_coeff[5] = {0.0, };
     } camera_param;
