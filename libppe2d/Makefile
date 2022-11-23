@@ -61,7 +61,7 @@ $(BUILDDIR)algorithm.o: $(CURRENT_DIR)/algorithm.cc
 					   $(CC) $(CXXFLAGS) $(INCLUDE_DIR) -c $^ -o $@
 
 test_ppe2d : $(BUILDDIR)test_ppe2d.o
-			  $(CC) $(LDFLAGS) $(LD_LIBRARY_PATH) -o $(BUILDDIR)$@ $^ $(LDLIBS) -lppe2d
+			  $(CC) $(LDFLAGS) $(LD_LIBRARY_PATH) -o $(BUILDDIR)$@ $^ $(LDLIBS) -llibppe2d
 $(BUILDDIR)test_ppe2d.o: $(CURRENT_DIR)/test_ppe2d.cc
 					   $(CC) $(CXXFLAGS) $(INCLUDE_DIR) -c $^ -o $@
 
