@@ -20,7 +20,7 @@ GCC := gcc
 LD_LIBRARY_PATH += -L./lib/armhf
 OUTDIR		= $(CURRENT_DIR)/../bin/
 BUILDDIR		= $(CURRENT_DIR)/../bin/
-INCLUDE_DIR = -I./ -I$(CURRENT_DIR)/ -I/usr/include/
+INCLUDE_DIR = -I./ -I$(CURRENT_DIR)/ -I/usr/include/ -I/usr/include/opencv4/
 LD_LIBRARY_PATH += -L/usr/local/lib -L./lib/armhf -L$(CURRENT_DIR)/../../lib/armhf/
 
 # OS
