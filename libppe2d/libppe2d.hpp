@@ -115,7 +115,7 @@ namespace libppe2d {
 
         public:
 
-    }
-}
+    };
+} /* namespace */
 
 # endif
